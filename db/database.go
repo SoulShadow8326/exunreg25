@@ -14,37 +14,37 @@ type Database struct {
 }
 
 type User struct {
-	ID int `json:"id"`
-	Username string `json:"username"`
-	Email string `json:"email"`
-	PasswordHash string `json:"password_hash"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID           int       `json:"id"`
+	Username     string    `json:"username"`
+	Email        string    `json:"email"`
+	PasswordHash string    `json:"password_hash"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type Event struct {
-	ID string `json:"id"`
-	Name string `json:"name"`
-	Image string `json:"image"`
-	OpenToAll bool `json:"open_to_all"`
-	Eligibility string `json:"eligibility"` 
-	Participants int `json:"participants"`
-	Mode string `json:"mode"`
-	IndependentRegistration bool `json:"independent_registration"`
-	Points int `json:"points"`
-	Dates string `json:"dates"`
-	DescriptionLong string `json:"description_long"`
-	DescriptionShort string `json:"description_short"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID                      string    `json:"id"`
+	Name                    string    `json:"name"`
+	Image                   string    `json:"image"`
+	OpenToAll               bool      `json:"open_to_all"`
+	Eligibility             string    `json:"eligibility"`
+	Participants            int       `json:"participants"`
+	Mode                    string    `json:"mode"`
+	IndependentRegistration bool      `json:"independent_registration"`
+	Points                  int       `json:"points"`
+	Dates                   string    `json:"dates"`
+	DescriptionLong         string    `json:"description_long"`
+	DescriptionShort        string    `json:"description_short"`
+	CreatedAt               time.Time `json:"created_at"`
+	UpdatedAt               time.Time `json:"updated_at"`
 }
 
 type Registration struct {
-	ID int `json:"id"`
-	EventID string `json:"event_id"`
-	UserID int `json:"user_id"`
-	TeamName string `json:"team_name"`
-	Status string `json:"status"` 
+	ID        int       `json:"id"`
+	EventID   string    `json:"event_id"`
+	UserID    int       `json:"user_id"`
+	TeamName  string    `json:"team_name"`
+	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -77,7 +77,6 @@ func (db *Database) InitTables() error {
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`
-
 	createEventsTable := `
 	CREATE TABLE IF NOT EXISTS events (
 		id TEXT PRIMARY KEY,
@@ -114,7 +113,6 @@ func (db *Database) InitTables() error {
 	CREATE INDEX IF NOT EXISTS idx_registrations_event_user ON registrations(event_id, user_id);
 	CREATE INDEX IF NOT EXISTS idx_registrations_status ON registrations(status);
 	`
-
 	if _, err := db.Exec(createUsersTable); err != nil {
 		return fmt.Errorf("error creating users table: %v", err)
 	}
@@ -138,55 +136,119 @@ func (db *Database) InitTables() error {
 func (db *Database) Get(entity string, key string) (interface{}, error) {
 	switch entity {
 	case "users":
-		return db.getUser(key)
+		query := `SELECT id, username, email, password_hash, created_at, updated_at FROM users WHERE email = ?`
+		user := &User{}
+		err := db.QueryRow(query, key).Scan(
+			&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		return user, nil
+
 	case "events":
-		return db.getEvent(key)
+		query := `SELECT id, name, image, open_to_all, eligibility, participants, mode, 
+			independent_registration, points, dates, description_long, description_short, created_at, updated_at 
+			FROM events WHERE id = ?`
+		event := &Event{}
+		err := db.QueryRow(query, key).Scan(
+			&event.ID, &event.Name, &event.Image, &event.OpenToAll, &event.Eligibility,
+			&event.Participants, &event.Mode, &event.IndependentRegistration, &event.Points, &event.Dates,
+			&event.DescriptionLong, &event.DescriptionShort, &event.CreatedAt, &event.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		return event, nil
+
 	case "registrations":
-		return db.getRegistration(key)
+		query := `SELECT id, event_id, user_id, team_name, status, created_at, updated_at FROM registrations WHERE id = ?`
+		reg := &Registration{}
+		err := db.QueryRow(query, key).Scan(
+			&reg.ID, &reg.EventID, &reg.UserID, &reg.TeamName, &reg.Status, &reg.CreatedAt, &reg.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		return reg, nil
+
 	default:
 		return nil, fmt.Errorf("unknown entity: %s", entity)
 	}
 }
 
 func (db *Database) Create(entity string, data interface{}) error {
+	now := time.Now()
+
 	switch entity {
 	case "users":
-		if user, ok := data.(*User); ok {
-			return db.createUser(user)
+		user, ok := data.(*User)
+		if !ok {
+			return fmt.Errorf("invalid user data")
 		}
-		return fmt.Errorf("invalid user data")
+		query := `INSERT INTO users (username, email, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`
+		_, err := db.Exec(query, user.Username, user.Email, user.PasswordHash, now, now)
+		return err
+
 	case "events":
-		if event, ok := data.(*Event); ok {
-			return db.createEvent(event)
+		event, ok := data.(*Event)
+		if !ok {
+			return fmt.Errorf("invalid event data")
 		}
-		return fmt.Errorf("invalid event data")
+		query := `INSERT INTO events (id, name, image, open_to_all, eligibility, participants, mode, 
+			independent_registration, points, dates, description_long, description_short, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		_, err := db.Exec(query, event.ID, event.Name, event.Image, event.OpenToAll, event.Eligibility,
+			event.Participants, event.Mode, event.IndependentRegistration, event.Points, event.Dates,
+			event.DescriptionLong, event.DescriptionShort, now, now)
+		return err
+
 	case "registrations":
-		if reg, ok := data.(*Registration); ok {
-			return db.createRegistration(reg)
+		reg, ok := data.(*Registration)
+		if !ok {
+			return fmt.Errorf("invalid registration data")
 		}
-		return fmt.Errorf("invalid registration data")
+		query := `INSERT INTO registrations (event_id, user_id, team_name, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
+		_, err := db.Exec(query, reg.EventID, reg.UserID, reg.TeamName, reg.Status, now, now)
+		return err
+
 	default:
 		return fmt.Errorf("unknown entity: %s", entity)
 	}
 }
 
 func (db *Database) Update(entity string, key string, data interface{}) error {
+	now := time.Now()
+
 	switch entity {
 	case "users":
-		if user, ok := data.(*User); ok {
-			return db.updateUser(key, user)
+		user, ok := data.(*User)
+		if !ok {
+			return fmt.Errorf("invalid user data")
 		}
-		return fmt.Errorf("invalid user data")
+		query := `UPDATE users SET username = ?, password_hash = ?, updated_at = ? WHERE email = ?`
+		_, err := db.Exec(query, user.Username, user.PasswordHash, now, key)
+		return err
+
 	case "events":
-		if event, ok := data.(*Event); ok {
-			return db.updateEvent(key, event)
+		event, ok := data.(*Event)
+		if !ok {
+			return fmt.Errorf("invalid event data")
 		}
-		return fmt.Errorf("invalid event data")
+		query := `UPDATE events SET name = ?, image = ?, open_to_all = ?, eligibility = ?, participants = ?, 
+		mode = ?, independent_registration = ?, points = ?, dates = ?, description_long = ?, 
+		description_short = ?, updated_at = ? WHERE id = ?`
+		_, err := db.Exec(query, event.Name, event.Image, event.OpenToAll, event.Eligibility,
+			event.Participants, event.Mode, event.IndependentRegistration, event.Points, event.Dates,
+			event.DescriptionLong, event.DescriptionShort, now, key)
+		return err
+
 	case "registrations":
-		if reg, ok := data.(*Registration); ok {
-			return db.updateRegistration(key, reg)
+		reg, ok := data.(*Registration)
+		if !ok {
+			return fmt.Errorf("invalid registration data")
 		}
-		return fmt.Errorf("invalid registration data")
+		query := `UPDATE registrations SET event_id = ?, user_id = ?, team_name = ?, status = ?, updated_at = ? WHERE id = ?`
+		_, err := db.Exec(query, reg.EventID, reg.UserID, reg.TeamName, reg.Status, now, key)
+		return err
+
 	default:
 		return fmt.Errorf("unknown entity: %s", entity)
 	}
@@ -195,140 +257,21 @@ func (db *Database) Update(entity string, key string, data interface{}) error {
 func (db *Database) Delete(entity string, key string) error {
 	switch entity {
 	case "users":
-		return db.deleteUser(key)
+		query := `DELETE FROM users WHERE email = ?`
+		_, err := db.Exec(query, key)
+		return err
+
 	case "events":
-		return db.deleteEvent(key)
+		query := `DELETE FROM events WHERE id = ?`
+		_, err := db.Exec(query, key)
+		return err
+
 	case "registrations":
-		return db.deleteRegistration(key)
+		query := `DELETE FROM registrations WHERE id = ?`
+		_, err := db.Exec(query, key)
+		return err
+
 	default:
 		return fmt.Errorf("unknown entity: %s", entity)
 	}
-}
-
-func (db *Database) getUser(email string) (*User, error) {
-	query := `SELECT id, username, email, password_hash, created_at, updated_at FROM users WHERE email = ?`
-
-	user := &User{}
-	err := db.QueryRow(query, email).Scan(
-		&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return user, nil
-}
-
-func (db *Database) getEvent(id string) (*Event, error) {
-	query := `SELECT id, name, image, open_to_all, eligibility, participants, mode, 
-		independent_registration, points, dates, description_long, description_short, created_at, updated_at 
-		FROM events WHERE id = ?`
-
-	event := &Event{}
-	err := db.QueryRow(query, id).Scan(
-		&event.ID, &event.Name, &event.Image, &event.OpenToAll, &event.Eligibility,
-		&event.Participants, &event.Mode, &event.IndependentRegistration, &event.Points, &event.Dates,
-		&event.DescriptionLong, &event.DescriptionShort, &event.CreatedAt, &event.UpdatedAt)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return event, nil
-}
-
-func (db *Database) getRegistration(id string) (*Registration, error) {
-	query := `SELECT id, event_id, user_id, team_name, status, created_at, updated_at FROM registrations WHERE id = ?`
-
-	reg := &Registration{}
-	err := db.QueryRow(query, id).Scan(
-		&reg.ID, &reg.EventID, &reg.UserID, &reg.TeamName, &reg.Status, &reg.CreatedAt, &reg.UpdatedAt)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return reg, nil
-}
-
-func (db *Database) createUser(user *User) error {
-	query := `
-	INSERT INTO users (username, email, password_hash, created_at, updated_at)
-	VALUES (?, ?, ?, ?, ?)`
-
-	now := time.Now()
-	_, err := db.Exec(query, user.Username, user.Email, user.PasswordHash, now, now)
-	return err
-}
-
-func (db *Database) createEvent(event *Event) error {
-	query := `
-	INSERT INTO events (id, name, image, open_to_all, eligibility, participants, mode, 
-		independent_registration, points, dates, description_long, description_short, created_at, updated_at)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-
-	now := time.Now()
-	_, err := db.Exec(query, event.ID, event.Name, event.Image, event.OpenToAll, event.Eligibility,
-		event.Participants, event.Mode, event.IndependentRegistration, event.Points, event.Dates,
-		event.DescriptionLong, event.DescriptionShort, now, now)
-	return err
-}
-
-func (db *Database) createRegistration(reg *Registration) error {
-	query := `
-	INSERT INTO registrations (event_id, user_id, team_name, status, created_at, updated_at)
-	VALUES (?, ?, ?, ?, ?, ?)`
-
-	now := time.Now()
-	_, err := db.Exec(query, reg.EventID, reg.UserID, reg.TeamName, reg.Status, now, now)
-	return err
-}
-
-func (db *Database) updateUser(email string, user *User) error {
-	query := `
-	UPDATE users SET username = ?, password_hash = ?, updated_at = ? WHERE email = ?`
-
-	now := time.Now()
-	_, err := db.Exec(query, user.Username, user.PasswordHash, now, email)
-	return err
-}
-
-func (db *Database) updateEvent(id string, event *Event) error {
-	query := `
-	UPDATE events SET name = ?, image = ?, open_to_all = ?, eligibility = ?, participants = ?, 
-	mode = ?, independent_registration = ?, points = ?, dates = ?, description_long = ?, 
-	description_short = ?, updated_at = ? WHERE id = ?`
-
-	now := time.Now()
-	_, err := db.Exec(query, event.Name, event.Image, event.OpenToAll, event.Eligibility,
-		event.Participants, event.Mode, event.IndependentRegistration, event.Points, event.Dates,
-		event.DescriptionLong, event.DescriptionShort, now, id)
-	return err
-}
-
-func (db *Database) updateRegistration(id string, reg *Registration) error {
-	query := `
-	UPDATE registrations SET event_id = ?, user_id = ?, team_name = ?, status = ?, updated_at = ? WHERE id = ?`
-
-	now := time.Now()
-	_, err := db.Exec(query, reg.EventID, reg.UserID, reg.TeamName, reg.Status, now, id)
-	return err
-}
-
-func (db *Database) deleteUser(email string) error {
-	query := `DELETE FROM users WHERE email = ?`
-	_, err := db.Exec(query, email)
-	return err
-}
-
-func (db *Database) deleteEvent(id string) error {
-	query := `DELETE FROM events WHERE id = ?`
-	_, err := db.Exec(query, id)
-	return err
-}
-
-func (db *Database) deleteRegistration(id string) error {
-	query := `DELETE FROM registrations WHERE id = ?`
-	_, err := db.Exec(query, id)
-	return err
 }
