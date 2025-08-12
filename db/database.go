@@ -14,12 +14,19 @@ type Database struct {
 }
 
 type User struct {
-	ID           int       `json:"id"`
-	Username     string    `json:"username"`
-	Email        string    `json:"email"`
-	PasswordHash string    `json:"password_hash"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID              int       `json:"id"`
+	Username        string    `json:"username"`
+	Email           string    `json:"email"`
+	PasswordHash    string    `json:"password_hash"`
+	Fullname        string    `json:"fullname"`
+	PhoneNumber     string    `json:"phone_number"`
+	PrincipalsEmail string    `json:"principals_email"`
+	Individual      string    `json:"individual"`
+	InstitutionName string    `json:"institution_name"`
+	Address         string    `json:"address"`
+	PrincipalsName  string    `json:"principals_name"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 type Event struct {
@@ -74,6 +81,13 @@ func (db *Database) InitTables() error {
 		username TEXT UNIQUE NOT NULL,
 		email TEXT UNIQUE NOT NULL,
 		password_hash TEXT NOT NULL,
+		fullname TEXT,
+		phone_number TEXT,
+		principals_email TEXT,
+		individual TEXT,
+		institution_name TEXT,
+		address TEXT,
+		principals_name TEXT,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`
@@ -83,7 +97,7 @@ func (db *Database) InitTables() error {
 		name TEXT NOT NULL,
 		image TEXT,
 		open_to_all BOOLEAN DEFAULT FALSE,
-		eligibility TEXT, -- JSON string for grade range [6, 12]
+		eligibility TEXT,
 		participants INTEGER DEFAULT 1,
 		mode TEXT DEFAULT 'online',
 		independent_registration BOOLEAN DEFAULT TRUE,
@@ -113,6 +127,7 @@ func (db *Database) InitTables() error {
 	CREATE INDEX IF NOT EXISTS idx_registrations_event_user ON registrations(event_id, user_id);
 	CREATE INDEX IF NOT EXISTS idx_registrations_status ON registrations(status);
 	`
+
 	if _, err := db.Exec(createUsersTable); err != nil {
 		return fmt.Errorf("error creating users table: %v", err)
 	}
@@ -136,10 +151,10 @@ func (db *Database) InitTables() error {
 func (db *Database) Get(entity string, key string) (interface{}, error) {
 	switch entity {
 	case "users":
-		query := `SELECT id, username, email, password_hash, created_at, updated_at FROM users WHERE email = ?`
+		query := `SELECT id, username, email, password_hash, fullname, phone_number, principals_email, individual, institution_name, address, principals_name, created_at, updated_at FROM users WHERE email = ?`
 		user := &User{}
 		err := db.QueryRow(query, key).Scan(
-			&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
+			&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.Fullname, &user.PhoneNumber, &user.PrincipalsEmail, &user.Individual, &user.InstitutionName, &user.Address, &user.PrincipalsName, &user.CreatedAt, &user.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -183,8 +198,8 @@ func (db *Database) Create(entity string, data interface{}) error {
 		if !ok {
 			return fmt.Errorf("invalid user data")
 		}
-		query := `INSERT INTO users (username, email, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`
-		_, err := db.Exec(query, user.Username, user.Email, user.PasswordHash, now, now)
+		query := `INSERT INTO users (username, email, password_hash, fullname, phone_number, principals_email, individual, institution_name, address, principals_name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		_, err := db.Exec(query, user.Username, user.Email, user.PasswordHash, user.Fullname, user.PhoneNumber, user.PrincipalsEmail, user.Individual, user.InstitutionName, user.Address, user.PrincipalsName, now, now)
 		return err
 
 	case "events":
@@ -223,8 +238,8 @@ func (db *Database) Update(entity string, key string, data interface{}) error {
 		if !ok {
 			return fmt.Errorf("invalid user data")
 		}
-		query := `UPDATE users SET username = ?, password_hash = ?, updated_at = ? WHERE email = ?`
-		_, err := db.Exec(query, user.Username, user.PasswordHash, now, key)
+		query := `UPDATE users SET username = ?, fullname = ?, phone_number = ?, principals_email = ?, individual = ?, institution_name = ?, address = ?, principals_name = ?, updated_at = ? WHERE email = ?`
+		_, err := db.Exec(query, user.Username, user.Fullname, user.PhoneNumber, user.PrincipalsEmail, user.Individual, user.InstitutionName, user.Address, user.PrincipalsName, now, key)
 		return err
 
 	case "events":
@@ -233,8 +248,8 @@ func (db *Database) Update(entity string, key string, data interface{}) error {
 			return fmt.Errorf("invalid event data")
 		}
 		query := `UPDATE events SET name = ?, image = ?, open_to_all = ?, eligibility = ?, participants = ?, 
-		mode = ?, independent_registration = ?, points = ?, dates = ?, description_long = ?, 
-		description_short = ?, updated_at = ? WHERE id = ?`
+			mode = ?, independent_registration = ?, points = ?, dates = ?, description_long = ?, 
+			description_short = ?, updated_at = ? WHERE id = ?`
 		_, err := db.Exec(query, event.Name, event.Image, event.OpenToAll, event.Eligibility,
 			event.Participants, event.Mode, event.IndependentRegistration, event.Points, event.Dates,
 			event.DescriptionLong, event.DescriptionShort, now, key)
@@ -273,5 +288,72 @@ func (db *Database) Delete(entity string, key string) error {
 
 	default:
 		return fmt.Errorf("unknown entity: %s", entity)
+	}
+}
+
+func (db *Database) GetAll(entity string) ([]interface{}, error) {
+	switch entity {
+	case "users":
+		query := `SELECT id, username, email, password_hash, fullname, phone_number, principals_email, individual, institution_name, address, principals_name, created_at, updated_at FROM users`
+		rows, err := db.Query(query)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		var users []interface{}
+		for rows.Next() {
+			user := &User{}
+			err := rows.Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.Fullname, &user.PhoneNumber, &user.PrincipalsEmail, &user.Individual, &user.InstitutionName, &user.Address, &user.PrincipalsName, &user.CreatedAt, &user.UpdatedAt)
+			if err != nil {
+				return nil, err
+			}
+			users = append(users, user)
+		}
+		return users, nil
+
+	case "events":
+		query := `SELECT id, name, image, open_to_all, eligibility, participants, mode, 
+			independent_registration, points, dates, description_long, description_short, created_at, updated_at FROM events`
+		rows, err := db.Query(query)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		var events []interface{}
+		for rows.Next() {
+			event := &Event{}
+			err := rows.Scan(&event.ID, &event.Name, &event.Image, &event.OpenToAll, &event.Eligibility,
+				&event.Participants, &event.Mode, &event.IndependentRegistration, &event.Points, &event.Dates,
+				&event.DescriptionLong, &event.DescriptionShort, &event.CreatedAt, &event.UpdatedAt)
+			if err != nil {
+				return nil, err
+			}
+			events = append(events, event)
+		}
+		return events, nil
+
+	case "registrations":
+		query := `SELECT id, event_id, user_id, team_name, status, created_at, updated_at FROM registrations`
+		rows, err := db.Query(query)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		var registrations []interface{}
+		for rows.Next() {
+			reg := &Registration{}
+			err := rows.Scan(&reg.ID, &reg.EventID, &reg.UserID, &reg.TeamName, &reg.Status, &reg.CreatedAt, &reg.UpdatedAt)
+			if err != nil {
+				return nil, err
+			}
+			registrations = append(registrations, reg)
+		}
+		return registrations, nil
+
+	default:
+		return nil, fmt.Errorf("unknown entity: %s", entity)
 	}
 }
