@@ -47,6 +47,30 @@ func SetupRoutes() *http.ServeMux {
 	summaryHandler := http.HandlerFunc(handlers.GetUserSummary)
 	mux.Handle("/api/summary", middleware.AuthRequired(summaryHandler))
 
+	adminPanelHandler := http.HandlerFunc(handlers.AdminPanel)
+	mux.Handle("/admin", middleware.AuthRequired(adminPanelHandler))
+
+	adminStatsHandler := http.HandlerFunc(handlers.GetAdminStats)
+	mux.Handle("/api/admin/stats", middleware.AuthRequired(adminStatsHandler))
+
+	adminEventHandler := http.HandlerFunc(handlers.GetAdminEvent)
+	mux.Handle("/api/admin/events/", middleware.AuthRequired(adminEventHandler))
+
+	adminUpdateEventHandler := http.HandlerFunc(handlers.UpdateEvent)
+	mux.Handle("/api/admin/events", middleware.AuthRequired(adminUpdateEventHandler))
+
+	adminDeleteEventHandler := http.HandlerFunc(handlers.DeleteEvent)
+	mux.Handle("/api/admin/events/", middleware.AuthRequired(adminDeleteEventHandler))
+
+	adminUserDetailsHandler := http.HandlerFunc(handlers.GetUserDetails)
+	mux.Handle("/api/admin/users", middleware.AuthRequired(adminUserDetailsHandler))
+
+	adminEventRegistrationsHandler := http.HandlerFunc(handlers.GetEventRegistrations)
+	mux.Handle("/api/admin/event-registrations", middleware.AuthRequired(adminEventRegistrationsHandler))
+
+	adminExportHandler := http.HandlerFunc(handlers.ExportData)
+	mux.Handle("/api/admin/export", middleware.AuthRequired(adminExportHandler))
+
 	return mux
 }
 
