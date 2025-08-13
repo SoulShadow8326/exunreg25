@@ -122,6 +122,34 @@ func SubmitRegistrations(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
+
+	if user.Registrations == nil {
+		user.Registrations = make(map[string][]db.Participant)
+	}
+
+	participants := make([]db.Participant, len(req.Data))
+	for i, p := range req.Data {
+		participants[i] = db.Participant{
+			Name:  p.Name,
+			Email: p.Email,
+			Class: p.Class,
+			Phone: p.Phone,
+		}
+	}
+
+	user.Registrations[req.EventID] = participants
+
+	if err := globalDB.Update("users", email, user); err != nil {
+		response := Response{
+			Status: "error",
+			Error:  "Failed to update user registrations",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
 	registration := &db.Registration{
 		EventID:   req.EventID,
 		UserID:    user.ID,

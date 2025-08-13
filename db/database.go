@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -13,20 +14,72 @@ type Database struct {
 	*sql.DB
 }
 
+type Participant struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	Class int    `json:"class"`
+	Phone string `json:"phone"`
+}
+
 type User struct {
-	ID              int       `json:"id"`
-	Username        string    `json:"username"`
-	Email           string    `json:"email"`
-	PasswordHash    string    `json:"password_hash"`
-	Fullname        string    `json:"fullname"`
-	PhoneNumber     string    `json:"phone_number"`
-	PrincipalsEmail string    `json:"principals_email"`
-	Individual      string    `json:"individual"`
-	InstitutionName string    `json:"institution_name"`
-	Address         string    `json:"address"`
-	PrincipalsName  string    `json:"principals_name"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID              int                      `json:"id"`
+	Username        string                   `json:"username"`
+	Email           string                   `json:"email"`
+	PasswordHash    string                   `json:"password_hash"`
+	Fullname        string                   `json:"fullname"`
+	PhoneNumber     string                   `json:"phone_number"`
+	PrincipalsEmail string                   `json:"principals_email"`
+	Individual      string                   `json:"individual"`
+	InstitutionName string                   `json:"institution_name"`
+	Address         string                   `json:"address"`
+	PrincipalsName  string                   `json:"principals_name"`
+	Registrations   map[string][]Participant `json:"registrations"`
+	CreatedAt       time.Time                `json:"created_at"`
+	UpdatedAt       time.Time                `json:"updated_at"`
+}
+
+func (u *User) MarshalJSON() ([]byte, error) {
+	type Alias User
+	return json.Marshal(&struct {
+		*Alias
+		Registrations string `json:"registrations"`
+	}{
+		Alias:         (*Alias)(u),
+		Registrations: u.marshalRegistrations(),
+	})
+}
+
+func (u *User) UnmarshalJSON(data []byte) error {
+	type Alias User
+	aux := &struct {
+		*Alias
+		Registrations string `json:"registrations"`
+	}{
+		Alias: (*Alias)(u),
+	}
+	if err := json.Unmarshal(data, aux); err != nil {
+		return err
+	}
+	return u.unmarshalRegistrations(aux.Registrations)
+}
+
+func (u *User) marshalRegistrations() string {
+	if u.Registrations == nil {
+		return "{}"
+	}
+	data, err := json.Marshal(u.Registrations)
+	if err != nil {
+		return "{}"
+	}
+	return string(data)
+}
+
+func (u *User) unmarshalRegistrations(data string) error {
+	if data == "" || data == "{}" {
+		u.Registrations = make(map[string][]Participant)
+		return nil
+	}
+	return json.Unmarshal([]byte(data), &u.Registrations)
 }
 
 type Event struct {
@@ -88,9 +141,11 @@ func (db *Database) InitTables() error {
 		institution_name TEXT,
 		address TEXT,
 		principals_name TEXT,
+		registrations TEXT DEFAULT '{}',
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`
+
 	createEventsTable := `
 	CREATE TABLE IF NOT EXISTS events (
 		id TEXT PRIMARY KEY,
@@ -151,13 +206,15 @@ func (db *Database) InitTables() error {
 func (db *Database) Get(entity string, key string) (interface{}, error) {
 	switch entity {
 	case "users":
-		query := `SELECT id, username, email, password_hash, fullname, phone_number, principals_email, individual, institution_name, address, principals_name, created_at, updated_at FROM users WHERE email = ?`
+		query := `SELECT id, username, email, password_hash, fullname, phone_number, principals_email, individual, institution_name, address, principals_name, registrations, created_at, updated_at FROM users WHERE email = ?`
 		user := &User{}
+		var registrationsStr string
 		err := db.QueryRow(query, key).Scan(
-			&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.Fullname, &user.PhoneNumber, &user.PrincipalsEmail, &user.Individual, &user.InstitutionName, &user.Address, &user.PrincipalsName, &user.CreatedAt, &user.UpdatedAt)
+			&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.Fullname, &user.PhoneNumber, &user.PrincipalsEmail, &user.Individual, &user.InstitutionName, &user.Address, &user.PrincipalsName, &registrationsStr, &user.CreatedAt, &user.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
+		user.unmarshalRegistrations(registrationsStr)
 		return user, nil
 
 	case "events":
@@ -198,8 +255,8 @@ func (db *Database) Create(entity string, data interface{}) error {
 		if !ok {
 			return fmt.Errorf("invalid user data")
 		}
-		query := `INSERT INTO users (username, email, password_hash, fullname, phone_number, principals_email, individual, institution_name, address, principals_name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-		_, err := db.Exec(query, user.Username, user.Email, user.PasswordHash, user.Fullname, user.PhoneNumber, user.PrincipalsEmail, user.Individual, user.InstitutionName, user.Address, user.PrincipalsName, now, now)
+		query := `INSERT INTO users (username, email, password_hash, fullname, phone_number, principals_email, individual, institution_name, address, principals_name, registrations, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		_, err := db.Exec(query, user.Username, user.Email, user.PasswordHash, user.Fullname, user.PhoneNumber, user.PrincipalsEmail, user.Individual, user.InstitutionName, user.Address, user.PrincipalsName, user.marshalRegistrations(), now, now)
 		return err
 
 	case "events":
@@ -238,8 +295,8 @@ func (db *Database) Update(entity string, key string, data interface{}) error {
 		if !ok {
 			return fmt.Errorf("invalid user data")
 		}
-		query := `UPDATE users SET username = ?, fullname = ?, phone_number = ?, principals_email = ?, individual = ?, institution_name = ?, address = ?, principals_name = ?, updated_at = ? WHERE email = ?`
-		_, err := db.Exec(query, user.Username, user.Fullname, user.PhoneNumber, user.PrincipalsEmail, user.Individual, user.InstitutionName, user.Address, user.PrincipalsName, now, key)
+		query := `UPDATE users SET username = ?, fullname = ?, phone_number = ?, principals_email = ?, individual = ?, institution_name = ?, address = ?, principals_name = ?, registrations = ?, updated_at = ? WHERE email = ?`
+		_, err := db.Exec(query, user.Username, user.Fullname, user.PhoneNumber, user.PrincipalsEmail, user.Individual, user.InstitutionName, user.Address, user.PrincipalsName, user.marshalRegistrations(), now, key)
 		return err
 
 	case "events":
@@ -294,7 +351,7 @@ func (db *Database) Delete(entity string, key string) error {
 func (db *Database) GetAll(entity string) ([]interface{}, error) {
 	switch entity {
 	case "users":
-		query := `SELECT id, username, email, password_hash, fullname, phone_number, principals_email, individual, institution_name, address, principals_name, created_at, updated_at FROM users`
+		query := `SELECT id, username, email, password_hash, fullname, phone_number, principals_email, individual, institution_name, address, principals_name, registrations, created_at, updated_at FROM users`
 		rows, err := db.Query(query)
 		if err != nil {
 			return nil, err
@@ -304,10 +361,12 @@ func (db *Database) GetAll(entity string) ([]interface{}, error) {
 		var users []interface{}
 		for rows.Next() {
 			user := &User{}
-			err := rows.Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.Fullname, &user.PhoneNumber, &user.PrincipalsEmail, &user.Individual, &user.InstitutionName, &user.Address, &user.PrincipalsName, &user.CreatedAt, &user.UpdatedAt)
+			var registrationsStr string
+			err := rows.Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.Fullname, &user.PhoneNumber, &user.PrincipalsEmail, &user.Individual, &user.InstitutionName, &user.Address, &user.PrincipalsName, &registrationsStr, &user.CreatedAt, &user.UpdatedAt)
 			if err != nil {
 				return nil, err
 			}
+			user.unmarshalRegistrations(registrationsStr)
 			users = append(users, user)
 		}
 		return users, nil

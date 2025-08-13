@@ -44,6 +44,9 @@ func SetupRoutes() *http.ServeMux {
 	registrationHistoryHandler := http.HandlerFunc(handlers.GetUserRegistrationHistory)
 	mux.Handle("/api/user/registration_history", middleware.AuthRequired(registrationHistoryHandler))
 
+	summaryHandler := http.HandlerFunc(handlers.GetUserSummary)
+	mux.Handle("/api/summary", middleware.AuthRequired(summaryHandler))
+
 	return mux
 }
 

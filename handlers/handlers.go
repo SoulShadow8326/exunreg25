@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
+
 	"exunreg25/db"
 )
 
@@ -38,10 +39,12 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
 	var userData struct {
 		Username string `json:"username"`
 		Email    string `json:"email"`
 	}
+
 	if err := json.NewDecoder(r.Body).Decode(&userData); err != nil {
 		response := Response{
 			Status: "error",
@@ -52,6 +55,7 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
+
 	user := &db.User{
 		Username:     userData.Username,
 		Email:        userData.Email,
@@ -59,6 +63,7 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}
+
 	if err := globalDB.Create("users", user); err != nil {
 		response := Response{
 			Status: "error",
@@ -69,11 +74,13 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
+
 	response := Response{
 		Status:  "success",
 		Message: "User registered successfully",
 		Data:    user,
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
@@ -88,6 +95,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 	var loginData struct {
 		Email string `json:"email"`
 	}
+
 	if err := json.NewDecoder(r.Body).Decode(&loginData); err != nil {
 		response := Response{
 			Status: "error",
@@ -110,6 +118,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
+
 	response := Response{
 		Status:  "success",
 		Message: "Login successful",
@@ -220,6 +229,7 @@ func GetEvent(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
+
 	response := Response{
 		Status:  "success",
 		Message: "Event retrieved successfully",
@@ -232,6 +242,7 @@ func GetEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 var globalDB *db.Database
+
 func SetGlobalDB(database *db.Database) {
 	globalDB = database
 }
