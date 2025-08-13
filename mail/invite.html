@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+
+<body style="margin: 0; padding: 0; color: #000; font-family: 'Trebuchet MS', Arial, sans-serif;">
+    <table role="presentation"
+        style="width: 100%; height: 100%; color: #000; font-family: 'Trebuchet MS', Arial, sans-serif;">
+        <tr>
+            <td align="center" style="padding: 1rem;">
+                <table role="presentation"
+                    style="width: 100%; max-width: 600px; background: #fff; border-radius: 0.75rem; border: 2px solid #2977f5; padding: 1.75rem 1.5rem; padding-bottom: 0px;">
+                    <tr>
+                        <td align="center" style="width: 15rem;">
+                            <img src="https://exunclan.com/_next/image?url=%2Flogo.png&w=384&q=75"
+                                style="width: 8rem;" alt="Exun Logo">
+                            <p style="font-size: 2.5rem; font-weight: 700; color: #2977F5; font-family: 'Nowdance', 'Trebuchet MS', Arial, sans-serif;">Exun 2025</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align="center">
+                            <h1 style="font-size: 1.5rem; line-height: 2rem; font-weight: 700; margin: 0.25rem; color: #2977F5; font-family: 'Trebuchet MS', Arial, sans-serif;">Registration Invite</h1>
+                            <p
+                                style="font-size: 0.875rem; line-height: 1.25rem; text-align: center; color: #000; margin: 0.25rem;">
+                                Dear Principal{{if .PrincipalName}} {{.PrincipalName}}{{end}},</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding-top: 2rem;">
+                            <div style="text-align: justify; color: #434343; line-height: 1.6;">
+                                <p style="margin-bottom: 1rem;">Exun Clan, the Technology Club of Delhi Public School R.K. Puram is hosting the <strong>30th</strong> iteration of its <strong>Annual IT Symposium: Exun 2025.</strong></p>
+                                
+                                <p style="margin-bottom: 1rem;">Exun 2025 will be held in a hybrid format. The hybrid format has allowed us to conduct Exun 2025 in a novel manner this year. The symposium consists of various events and competitions, added to this are multiple webinars and interactive sessions under the label of "Exun Talks", related to Computer Science and Information Technology.</p>
+                                
+                                <div style="background: #FFFFFF; padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; border: 2px solid #2977F5;">
+                                    <h3 style="color: #2977F5; margin-top: 0;">Online Prelims</h3>
+                                    <p style="margin: 0.5rem 0;"><strong>Dates:</strong> 27th October - 5th November, 2025</p>
+                                    <p style="margin: 0.5rem 0;"><strong>Venue:</strong> Virtual</p>
+                                    
+                                    <h3 style="color: #2977f5; margin-top: 1rem;">Exun Week</h3>
+                                    <p style="margin: 0.5rem 0;"><strong>Dates:</strong> 9th - 10th November, 2025</p>
+                                    <p style="margin: 0.5rem 0;"><strong>Venue:</strong> DPS RK Puram, Sector 10, R.K. Puram, New Delhi, India</p>
+                                </div>
+                                
+                                {{if .CustomMessage}}
+                                <div style="background: #FFFFFF; padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; border: 2px solid #2977F5;">
+                                    <p style="margin: 0;"><strong>Special Message:</strong> {{.CustomMessage}}</p>
+                                </div>
+                                {{end}}
+                                
+                                <p style="margin-bottom: 1rem;">We sincerely request the participation of <strong>{{.SchoolName}}</strong> in this event. Please note that <strong>the Event Details and Registration Form can be found at</strong> <a href="https://exunclan.com" style="color: #2977F5;">exunclan.com</a>.</p>
+                                
+                                <div style="background: #FFFFFF; padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; border: 2px solid #2977F5;">
+                                    <p style="margin: 0; color: #434343;"><strong>Online registration shall remain open till 11:59 pm on 6th November or till the event's Prelim Round deadline (according to respective events), whichever comes earlier.</strong></p>
+                                </div>
+                                
+                                <p style="margin-bottom: 1rem;">You may find our invite with details at <a href="https://reg.exunclan.com/brochure" style="color: #2977F5;">reg.exunclan.com/brochure</a></p>
+                                
+                                <p style="margin-bottom: 1rem;">We look forward to your school's participation in Exun 2025!</p>
+                                
+                                <div style="text-align: center; margin: 2rem 0;">
+                                    <a href="https://reg.exunclan.com" style="display: inline-block; background: #2977F5; color: #FFFFFF; padding: 0.75rem 1.5rem; text-decoration: none; border-radius: 0.5rem; font-weight: 600;">Register Now</a>
+                                </div>
+                                
+                                <div style="margin-top: 2rem;">
+                                    <p style="margin: 0.5rem 0;"><strong>Thank you</strong></p>
+                                    <p style="margin: 0.5rem 0;"><strong>Yours Sincerely,</strong></p>
+                                    <p style="margin: 0.5rem 0;"><strong>Anil Kumar</strong></p>
+                                    <p style="margin: 0.5rem 0;">Principal, Delhi Public School R.K. Puram</p>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>
+                            <div style="width: 100%; border-top: 2px solid #e9ecef; margin-top: 20px; padding-top: 20px;">
+                                                            <div style="text-align: center; color: #434343;">
+                                <p style="margin-right: 0.6rem;">&copy; Exun Clan</p>
+                                <p>The Computer Club of Delhi Public School, R.K. Puram</p>
+                            </div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

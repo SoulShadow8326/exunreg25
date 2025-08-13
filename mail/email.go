@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 )
+
 type EmailConfig struct {
 	SMTPHost     string
 	SMTPPort     string
@@ -21,6 +22,7 @@ type EmailConfig struct {
 type MailSender interface {
 	SendOTP(to, otp string) error
 }
+
 type EmailService struct {
 	config EmailConfig
 }
@@ -37,6 +39,10 @@ func (es *EmailService) SendOTP(to, otp string) error {
 		return fmt.Errorf("failed to render email template: %v", err)
 	}
 
+	return es.sendEmail(to, subject, htmlBody)
+}
+
+func (es *EmailService) SendEmail(to, subject, htmlBody string) error {
 	return es.sendEmail(to, subject, htmlBody)
 }
 
@@ -76,11 +82,13 @@ func (es *EmailService) sendEmail(to, subject, htmlBody string) error {
 		"MIME-Version": "1.0",
 		"Content-Type": "text/html; charset=UTF-8",
 	}
+
 	message := ""
 	for k, v := range headers {
 		message += fmt.Sprintf("%s: %s\r\n", k, v)
 	}
 	message += "\r\n" + htmlBody
+
 	addr := fmt.Sprintf("%s:%s", es.config.SMTPHost, es.config.SMTPPort)
 	if err := smtp.SendMail(addr, auth, es.config.FromEmail, []string{to}, []byte(message)); err != nil {
 		return fmt.Errorf("failed to send email: %v", err)
