@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home | Exun 2025 Registration</title>
+    <link rel="icon" href="assets/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="css/footer.css">
+    <link rel="stylesheet" href="css/home.css">
+    <link rel="stylesheet" href="css/event-card.css">
+    <link rel="stylesheet" href="css/toast.css">
+</head>
+<body data-page="home">
+    <div id="navbar-container"></div>
+    
+    <main class="hero">
+        <section class="hero__main">
+            <div class="hero__content">
+                <h1 class="hero__title" style="color:#2977f5">Exun 2025</h1>
+                <h2 class="hero__subtitle" style="color:#383838">The biggest tech symposium of India</h2>
+                
+                <p class="hero__description">
+                    Exun 2025, a plethora of events and a profusion of memories, awaits you. The 30th iteration of Exun Clan's annual international technology symposium is being organized with preliminary rounds and final events. Building from the success of previous years with participants from India and across the globe, we hope Exun 2025 scales to new heights. Check out our list of events below, with something for every variety of tech enthusiasts!
+                </p>
+                
+                <div class="hero__actions">
+                    <button class="btn btn--primary" data-action="explore-events">
+                        Explore Events
+                    </button>
+                    <button class="btn btn--secondary" data-action="view-brochure">
+                        View Brochure
+                    </button>
+                </div>
+                
+                <p class="hero__notice">
+                    The registrations for Exun 2025 will open soon. Please email exun@dpsrkp.net for further queries.
+                </p>
+            </div>
+            
+            <div class="hero__image">
+                <img src="assets/mainillus.webp" alt="Exun 2025 Illustration">
+            </div>
+        </section>
+        
+        <section class="events-section" style="padding-top: 10vw;">
+            <h2 class="events-section__title">Our Events</h2>
+            <div class="events-grid" id="events-grid">
+                <div class="loading-placeholder">Loading events...</div>
+            </div>
+        </section>
+    </main>
+    
+    <div id="footer-container" style="padding-top: 5vw;"></div>
+    
+    <script src="/js/api.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js/home.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadComponent('components/navbar.html', document.getElementById('navbar-container'));
+            await loadComponent('components/footer.html', document.getElementById('footer-container'));
+        });
+    </script>
+</body>
+</html>

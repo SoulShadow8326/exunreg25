@@ -8,6 +8,7 @@ import (
 	"net/smtp"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type EmailConfig struct {
@@ -59,7 +60,10 @@ func (es *EmailService) renderOTPTemplate(otp string) (string, error) {
 		return "", fmt.Errorf("failed to parse template: %v", err)
 	}
 
-	data := struct{ OTP string }{OTP: otp}
+	data := struct {
+		OTP       string
+		OTPDigits []string
+	}{OTP: otp, OTPDigits: strings.Split(otp, "")}
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, data); err != nil {

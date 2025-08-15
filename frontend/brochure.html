@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brochure | Exun 2025</title>
+    <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
+    
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/navbar.css">
+    <link rel="stylesheet" href="/css/footer.css">
+    <link rel="stylesheet" href="/css/brochure.css">
+    <link rel="stylesheet" href="/css/toast.css">
+</head>
+<body data-page="brochure">
+    <div id="navbar-container"></div>
+    
+    <main class="brochure-page">
+        <div class="container">
+            <div class="brochure-header">
+                <h1 class="brochure-title">Exun 2025 Brochure</h1>
+                <p class="brochure-subtitle">Comprehensive information about our events and symposium</p>
+            </div>
+            
+            <div class="brochure-content">
+                <div class="brochure-placeholder">
+                    <div class="brochure-icon">placeholder dont look</div>
+                    <h2 class="brochure-message">Brochure Coming Soon</h2>
+                    <p class="brochure-description">
+                        Our comprehensive brochure for Exun 2025 is being prepared and will be available soon. 
+                        It will contain detailed information about all events, schedules, prizes, and participation guidelines.
+                    </p>
+                    <div class="summary-actions">
+                        <button class="btn btn--primary" onclick="window.location.href='/events'">
+                            Browse Events
+                        </button>
+                        <button class="btn btn--secondary" onclick="window.location.href='/'">
+                            Back to Home
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <div id="footer-container"></div>
+    
+    <script src="/js/api.js"></script>
+    <script src="/js/utils.js"></script>
+    <script src="/js/navigation.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            await Utils.loadComponent('components/navbar.html', document.getElementById('navbar-container'));
+            await Utils.loadComponent('components/footer.html', document.getElementById('footer-container'));
+        });
+    </script>
+</body>
+</html>

@@ -19,24 +19,24 @@ import (
 	"exunreg25/routes"
 )
 
-func init(){
+func init() {
 	loadEnv()
 }
-func loadEnv(){
+func loadEnv() {
 	envFile, err := os.ReadFile(".env")
-	if err != nil{
+	if err != nil {
 		return
 	}
 	lines := strings.Split(string(envFile), "\n")
-	for _, line := range lines{
+	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#"){
+		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
 		parts := strings.SplitN(line, "=", 2)
-		if len(parts) == 2{
+		if len(parts) == 2 {
 			key := strings.TrimSpace(parts[0])
-			value:= strings.TrimSpace(parts[1])
+			value := strings.TrimSpace(parts[1])
 			os.Setenv(key, value)
 		}
 	}
@@ -79,8 +79,10 @@ func main() {
 
 	emailService := mail.NewEmailService(emailConfig)
 	authHandler := handlers.NewAuthHandler(database, authConfig, emailService)
+	adminHandler := handlers.NewAdminHandler(database)
 
 	handlers.SetGlobalAuthHandler(authHandler)
+	handlers.SetGlobalAdminHandler(adminHandler)
 	handlers.SetGlobalDB(database)
 
 	handler := routes.SetupRoutes()

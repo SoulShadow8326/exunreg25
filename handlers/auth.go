@@ -55,6 +55,12 @@ func (ah *AuthHandler) generateAuthToken(email string) string {
 	return hex.EncodeToString(hash[:])
 }
 
+func (ah *AuthHandler) hashPassword(password string) string {
+	data := ah.config.Salt + password
+	h := sha256.Sum256([]byte(data))
+	return hex.EncodeToString(h[:])
+}
+
 func (ah *AuthHandler) generateOTP(email string) string {
 	token := ah.generateAuthToken(email)
 	last6 := token[len(token)-6:]
@@ -118,9 +124,10 @@ func (ah *AuthHandler) SendOTP(w http.ResponseWriter, r *http.Request) {
 	otp := ah.generateOTP(req.Email)
 
 	if err := ah.mailSender.SendOTP(req.Email, otp); err != nil {
+		fmt.Printf("SendOTP error: %v\n", err)
 		response := Response{
 			Status: "error",
-			Error:  "Failed to send OTP",
+			Error:  err.Error(),
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -189,11 +196,23 @@ func (ah *AuthHandler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteStrictMode,
 		Expires:  time.Now().Add(24 * time.Hour),
 	})
+
+	user, err := ah.db.Get("users", req.Email)
+	needsSignup := true
+	if err == nil {
+		u := user.(*db.User)
+		if u.PasswordHash != "" {
+			needsSignup = false
+		}
+	}
+
 	response := Response{
 		Status:  "success",
-		Message: "Login successful",
+		Message: "OTP verified",
 		Data: map[string]interface{}{
-			"email": req.Email,
+			"email":        req.Email,
+			"needs_signup": needsSignup,
+			"token":        authToken,
 		},
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -297,6 +316,7 @@ func (ah *AuthHandler) CompleteSignup(w http.ResponseWriter, r *http.Request) {
 	}
 	var signupData struct {
 		Username string `json:"username"`
+		Password string `json:"password"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&signupData); err != nil {
 		response := Response{
@@ -311,12 +331,13 @@ func (ah *AuthHandler) CompleteSignup(w http.ResponseWriter, r *http.Request) {
 	user := &db.User{
 		Username:     signupData.Username,
 		Email:        email,
-		PasswordHash: "",
+		PasswordHash: ah.hashPassword(signupData.Password),
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}
 
 	if err := ah.db.Create("users", user); err != nil {
+		fmt.Printf("Create user error: %v\n", err)
 		response := Response{
 			Status: "error",
 			Error:  "Failed to create user",
@@ -326,6 +347,8 @@ func (ah *AuthHandler) CompleteSignup(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
+
+	fmt.Printf("User created: %s (%s)\n", user.Username, user.Email)
 
 	response := Response{
 		Status:  "success",

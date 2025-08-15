@@ -1,0 +1,96 @@
+.event-card {
+    background: var(--white);
+    border: 2px solid rgba(56, 58, 60, 0.1);
+    border-radius: 16px;
+    padding: 24px;
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+}
+
+.event-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(41, 119, 245, 0.15);
+    border-color: var(--exun-blue);
+}
+
+.event-card__image {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+}
+
+.event-card__title {
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+    color: var(--dark-charcoal);
+    margin: 0;
+}
+
+.event-card__details {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.event-card__mode {
+    background-color: #2977f5;
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.event-card__participants {
+    color: var(--slate-grey);
+    font-size: 14px;
+}
+
+.event-card__eligibility {
+    background-color: rgba(41, 119, 245, 0.1);
+    color: var(--exun-blue);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.event-card__eligibility--open {
+    background-color: rgba(0, 76, 76, 0.1);
+    color: var(--deep-teal);
+}
+
+@media (max-width: 768px) {
+    .event-card {
+        width: 280px;
+        padding: 20px;
+    }
+    
+    .event-card__image {
+        width: 64px;
+        height: 64px;
+    }
+    
+    .event-card__title {
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .event-card {
+        width: 100%;
+        max-width: 300px;
+        padding: 16px;
+    }
+}

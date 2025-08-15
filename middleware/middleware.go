@@ -13,7 +13,17 @@ type Response struct {
 	Data    interface{} `json:"data,omitempty"`
 	Error   string      `json:"error,omitempty"`
 }
-
+func IsAuthenticated(r *http.Request) bool {
+	emailCookie, err := r.Cookie("email")
+	if err != nil || emailCookie.Value == "" {
+		return false
+	}
+	tokenCookie, err := r.Cookie("auth_token")
+	if err != nil || tokenCookie.Value == "" {
+		return false
+	}
+	return true
+}
 func CORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")

@@ -1,14 +1,90 @@
 package routes
 
 import (
-	"net/http"
+	"encoding/json"
+	"io/ioutil"
+	"net/url"
+	"path/filepath"
+	"regexp"
+	"strings"
 
 	"exunreg25/handlers"
 	"exunreg25/middleware"
+	"mime"
+	"net/http"
 )
+
+func slugify(s string) string {
+	s = strings.ToLower(s)
+	re := regexp.MustCompile(`[^a-z0-9]+`)
+	s = re.ReplaceAllString(s, "-")
+	s = strings.Trim(s, "-")
+	return s
+}
 
 func SetupRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
+
+	mux.Handle("/assets/", http.StripPrefix("/assets/", customFileServer("./frontend/assets/")))
+	mux.Handle("/css/", http.StripPrefix("/css/", customFileServer("./frontend/css/")))
+	mux.Handle("/js/", http.StripPrefix("/js/", customFileServer("./frontend/js/")))
+	mux.Handle("/illustrations/", http.StripPrefix("/illustrations/", customFileServer("./frontend/illustrations/")))
+	mux.Handle("/data/", http.StripPrefix("/data/", customFileServer("./frontend/data/")))
+	mux.Handle("/fonts/", http.StripPrefix("/fonts/", customFileServer("./frontend/fonts/")))
+	mux.Handle("/components/", http.StripPrefix("/components/", customFileServer("./frontend/components/")))
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		switch path {
+		case "/", "/index":
+			http.ServeFile(w, r, "./frontend/index.html")
+			return
+		case "/events":
+			http.ServeFile(w, r, "./frontend/events.html")
+			return
+		case "/event-detail":
+			http.ServeFile(w, r, "./frontend/event-detail.html")
+			return
+		case "/admin":
+			http.ServeFile(w, r, "./frontend/admin.html")
+			return
+		case "/summary":
+			http.ServeFile(w, r, "./frontend/summary.html")
+			return
+		case "/brochure":
+			http.ServeFile(w, r, "./frontend/brochure.html")
+			return
+		case "/login":
+			http.ServeFile(w, r, "./frontend/login.html")
+			return
+		}
+		if strings.HasSuffix(path, ".html") {
+			http.Redirect(w, r, strings.TrimSuffix(path, ".html"), http.StatusMovedPermanently)
+			return
+		}
+
+		if path != "/" {
+			raw := strings.TrimPrefix(path, "/")
+			decoded, err := url.PathUnescape(raw)
+			if err == nil && decoded != "" {
+				if b, err := ioutil.ReadFile("./frontend/data/events.json"); err == nil {
+					var top map[string]json.RawMessage
+					if err := json.Unmarshal(b, &top); err == nil {
+						var eventsMap map[string]interface{}
+						if err := json.Unmarshal(top["events"], &eventsMap); err == nil {
+							for name := range eventsMap {
+								if name == decoded || slugify(name) == decoded {
+									http.ServeFile(w, r, "./frontend/event-detail.html")
+									return
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		http.NotFound(w, r)
+	})
 
 	mux.HandleFunc("/api/health", handlers.HealthCheck)
 
@@ -47,8 +123,13 @@ func SetupRoutes() *http.ServeMux {
 	summaryHandler := http.HandlerFunc(handlers.GetUserSummary)
 	mux.Handle("/api/summary", middleware.AuthRequired(summaryHandler))
 
-	adminPanelHandler := http.HandlerFunc(handlers.AdminPanel)
-	mux.Handle("/admin", middleware.AuthRequired(adminPanelHandler))
+	mux.HandleFunc("/admin", func(w http.ResponseWriter, r *http.Request) {
+		if !middleware.IsAuthenticated(r) {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+		handlers.AdminPanel(w, r)
+	})
 
 	adminStatsHandler := http.HandlerFunc(handlers.GetAdminStats)
 	mux.Handle("/api/admin/stats", middleware.AuthRequired(adminStatsHandler))
@@ -60,7 +141,7 @@ func SetupRoutes() *http.ServeMux {
 	mux.Handle("/api/admin/events", middleware.AuthRequired(adminUpdateEventHandler))
 
 	adminDeleteEventHandler := http.HandlerFunc(handlers.DeleteEvent)
-	mux.Handle("/api/admin/events/", middleware.AuthRequired(adminDeleteEventHandler))
+	mux.Handle("/api/admin/events/delete/", middleware.AuthRequired(adminDeleteEventHandler))
 
 	adminUserDetailsHandler := http.HandlerFunc(handlers.GetUserDetails)
 	mux.Handle("/api/admin/users", middleware.AuthRequired(adminUserDetailsHandler))
@@ -73,7 +154,29 @@ func SetupRoutes() *http.ServeMux {
 
 	return mux
 }
-
+func customFileServer(root string) http.Handler {
+	fs := http.FileServer(http.Dir(root))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ext := filepath.Ext(r.URL.Path)
+		switch ext {
+		case ".css":
+			w.Header().Set("Content-Type", "text/css")
+		case ".js":
+			w.Header().Set("Content-Type", "application/javascript")
+		case ".png":
+			w.Header().Set("Content-Type", "image/png")
+		case ".jpg", ".jpeg":
+			w.Header().Set("Content-Type", "image/jpeg")
+		case ".ico":
+			w.Header().Set("Content-Type", "image/x-icon")
+		default:
+			if mt := mime.TypeByExtension(ext); mt != "" {
+				w.Header().Set("Content-Type", mt)
+			}
+		}
+		fs.ServeHTTP(w, r)
+	})
+}
 func SetupServer() *http.Server {
 	mux := SetupRoutes()
 

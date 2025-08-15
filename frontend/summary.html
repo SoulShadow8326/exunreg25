@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration Summary | Exun 2025</title>
+    <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
+    
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/navbar.css">
+    <link rel="stylesheet" href="/css/footer.css">
+    <link rel="stylesheet" href="/css/summary.css">
+    <link rel="stylesheet" href="/css/toast.css">
+</head>
+<body data-page="summary">
+    <div id="navbar-container"></div>
+    
+    <main class="summary-page">
+        <div class="container">
+            <div class="summary-header">
+                <h1 class="summary-title">Registration Summary</h1>
+                <p class="summary-subtitle">View and manage your Exun 2025 event registrations</p>
+            </div>
+            
+            <div class="summary-stats">
+                <div class="summary-stat">
+                    <div class="summary-stat__value" id="total-registrations">0</div>
+                    <div class="summary-stat__label">Total Registrations</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-stat__value" id="confirmed-registrations">0</div>
+                    <div class="summary-stat__label">Confirmed</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-stat__value" id="pending-registrations">0</div>
+                    <div class="summary-stat__label">Pending</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-stat__value" id="team-events">0</div>
+                    <div class="summary-stat__label">Team Events</div>
+                </div>
+            </div>
+            
+            <div class="summary-content">
+                <div class="summary-section">
+                    <h2 class="summary-section__title">
+                        <span class="summary-section__icon">✧</span>
+                        Profile Information
+                    </h2>
+                    <div class="profile-section" id="profile-section">
+                        <div class="loading-placeholder">Loading profile...</div>
+                    </div>
+                </div>
+                
+                <div class="summary-section">
+                    <h2 class="summary-section__title">
+                        <span class="summary-section__icon">✧</span>
+                        Event Registrations
+                    </h2>
+                    <div id="registrations-container">
+                        <div class="loading-placeholder">Loading registrations...</div>
+                    </div>
+                </div>
+                
+                <div class="summary-actions">
+                    <button class="btn btn--primary" id="refresh-btn">
+                        Refresh Data
+                    </button>
+                    <button class="btn btn--secondary" id="edit-profile-btn">
+                        Edit Profile
+                    </button>
+                    <button class="btn btn--secondary" id="download-certificate-btn">
+                        Download Certificate
+                    </button>
+                    <button class="btn btn--secondary" id="logout-btn">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <div id="footer-container"></div>
+    
+    <script src="/js/api.js"></script>
+    <script src="/js/utils.js"></script>
+    <script src="/js/navigation.js"></script>
+    <script src="/js/summary.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            await Utils.loadComponent('components/navbar.html', document.getElementById('navbar-container'));
+            await Utils.loadComponent('components/footer.html', document.getElementById('footer-container'));
+        });
+    </script>
+</body>
+</html>
