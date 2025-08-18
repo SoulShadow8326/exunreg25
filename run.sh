@@ -24,6 +24,11 @@ else
   echo "Build failed" >&2
   exit 1
 fi
+echo "███████╗ ██╗  ██╗ ██╗   ██╗ ███╗   ██╗"
+echo "██╔════╝ ██║  ██║ ██║   ██║ ████╗  ██║"
+echo "█████╗     ███║   ██║   ██║ ██╔██╗ ██║"
+echo "██╔══╝   ██╔══██║ ██║   ██║ ██║╚██╗██║"
+echo "███████╗ ██║  ██║ ╚██████╔╝ ██║ ╚████║"
+echo "╚══════╝ ╚═╝  ╚═╝  ╚═════╝  ╚═╝  ╚═══╝"
 
-echo "Starting server (foreground). Press Ctrl-C to stop."
 ./exunreg25
