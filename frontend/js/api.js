@@ -10,6 +10,10 @@ async function apiRequest(endpoint, options = {}) {
         ...options
     };
 
+    if (!config.credentials) {
+        config.credentials = 'include'
+    }
+
     const token = localStorage.getItem('authToken');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -47,26 +51,55 @@ function clearAuthToken() {
 }
 
 function isAuthenticated() {
-    return !!localStorage.getItem('authToken');
+    if (localStorage.getItem('authToken')) return true;
+    const cookieValue = document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('auth_token='));
+    return !!cookieValue;
 }
 
 function getCurrentUser() {
     const token = localStorage.getItem('authToken');
     if (!token) return null;
-    
+    function base64UrlDecode(input) {
+        let str = input.replace(/-/g, '+').replace(/_/g, '/');
+        while (str.length % 4) {
+            str += '=';
+        }
+        return atob(str);
+    }
+    if (token.indexOf('.') === -1) {
+        return null;
+    }
+
     try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
+        const parts = token.split('.');
+        if (parts.length < 2) throw new Error('token is not a JWT');
+        const payloadBase64 = parts[1];
+        const payloadJson = base64UrlDecode(payloadBase64);
+        const payload = JSON.parse(payloadJson);
         return payload;
     } catch (error) {
-        console.error('Invalid token:', error);
-        localStorage.removeItem('authToken');
+        console.error('Invalid JWT token:', error);
+        try { localStorage.removeItem('authToken'); } catch(e) {}
         return null;
     }
 }
 
 function isAdmin() {
     const user = getCurrentUser();
-    return user && user.email === 'exun@dpsrkp.net';
+    if (!user || !user.email) return false;
+    if (!window.__ADMIN_EMAILS) {
+        apiRequest('/admin/config').then(resp => {
+            if (resp && resp.data && resp.data.admin_emails) {
+                window.__ADMIN_EMAILS = resp.data.admin_emails.split(',').map(s => s.trim().toLowerCase());
+            } else if (resp && resp.admin_emails) {
+                window.__ADMIN_EMAILS = resp.admin_emails.split(',').map(s => s.trim().toLowerCase());
+            }
+        }).catch(() => {
+            window.__ADMIN_EMAILS = ['exun@dpsrkp.net'];
+        });
+        return false;
+    }
+    return window.__ADMIN_EMAILS.indexOf(user.email.toLowerCase()) !== -1;
 }
 
 window.ExunServices = {
@@ -79,3 +112,9 @@ window.ExunServices = {
         isAdmin
     }
 };
+
+window.ExunServices.getCookie = function(name) {
+    const val = document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith(name + '='));
+    if (!val) return null;
+    return decodeURIComponent(val.split('=')[1] || '');
+}

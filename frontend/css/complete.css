@@ -16,8 +16,36 @@
     border-radius: 16px;
     padding: 40px;
     width: 100%;
-    max-width: 400px;
+    max-width: 1100px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.complete-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+    align-items: start;
+}
+
+.profile-panel {
+    min-width: 0;
+}
+
+.auth-panel {
+    background: #fbfbff;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 6px 18px rgba(16,24,40,0.04);
+}
+
+.profile-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+
+.auth-below {
+    grid-column: 1 / -1;
 }
 
 .login-header {
@@ -68,6 +96,7 @@
     font-size: 16px;
     transition: all 0.3s ease;
     background: var(--white);
+    margin-bottom: 8px;
 }
 
 .form-input:focus {
@@ -131,52 +160,6 @@
     text-decoration: underline;
 }
 
-.otp-container {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    margin: 24px 0;
-}
-
-.otp-input {
-    width: 50px;
-    height: 50px;
-    text-align: center;
-    font-size: 18px;
-    font-weight: 600;
-    border: 2px solid rgba(56, 58, 60, 0.2);
-    border-radius: 8px;
-    background: var(--white);
-    transition: all 0.3s ease;
-}
-
-.otp-input:focus {
-    outline: none;
-    border-color: var(--exun-blue);
-    box-shadow: 0 0 0 3px rgba(41, 119, 245, 0.1);
-}
-
-.otp-resend {
-    text-align: center;
-    margin-top: 16px;
-}
-
-.otp-resend-link {
-    color: var(--exun-blue);
-    font-size: 14px;
-    cursor: pointer;
-    text-decoration: none;
-}
-
-.otp-resend-link:hover {
-    text-decoration: underline;
-}
-
-.otp-resend-link:disabled {
-    color: var(--slate-grey);
-    cursor: not-allowed;
-}
-
 @media (max-width: 480px) {
     .login-container {
         padding: 24px;
@@ -186,14 +169,24 @@
     .login-title {
         font-size: 24px;
     }
-    
-    .otp-container {
-        gap: 8px;
+}
+
+@media (min-width: 881px) {
+    .complete-grid {
+        grid-template-columns: 1fr;
     }
-    
-    .otp-input {
-        width: 40px;
-        height: 40px;
-        font-size: 16px;
+}
+
+@media (min-width: 1100px) {
+    .complete-grid {
+        grid-template-columns: 1fr 420px;
+    }
+    .auth-below {
+        grid-column: 2 / 3;
+        align-self: start;
+        margin-left: 12px;
+    }
+    .profile-panel {
+        grid-column: 1 / 2;
     }
 }

@@ -14,6 +14,7 @@ class LoginPage {
     setupEventListeners() {
         const authForm = document.getElementById('auth-form');
         const otpForm = document.getElementById('otp-form');
+    const setPasswordForm = document.getElementById('set-password-form');
         const switchBtn = document.getElementById('auth-switch');
         
         if (authForm) {
@@ -22,6 +23,10 @@ class LoginPage {
         
         if (otpForm) {
             otpForm.addEventListener('submit', (e) => this.handleOTPSubmit(e));
+        }
+
+        if (setPasswordForm) {
+            setPasswordForm.addEventListener('submit', (e) => this.handleSetPassword(e));
         }
         
         if (switchBtn) {
@@ -128,7 +133,8 @@ class LoginPage {
             
             if (response.status === 'success') {
                 Utils.showToast('Login successful!', 'success');
-                ExunServices.api.setAuthToken(response.token);
+                const loginToken = (response.data && response.data.token) || response.token || null;
+                if (loginToken) ExunServices.api.setAuthToken(loginToken);
                 setTimeout(() => window.location.href = '/summary', 1000);
             } else {
                 throw new Error(response.error || 'Login failed');
@@ -180,13 +186,17 @@ class LoginPage {
             });
             
             if (response.status === 'success') {
-                if (response.needs_signup) {
-                    Utils.showToast('OTP verified! Complete your registration', 'success');
-                    setTimeout(() => window.location.href = '/complete-signup.html', 1000);
+                const otpToken = (response.data && response.data.token) || response.token || null;
+                if (otpToken) {
+                    ExunServices.api.setAuthToken(otpToken);
+                }
+
+                if (this.authMode === 'register' || response.needs_signup) {
+                    Utils.showToast('OTP verified! Set a password to complete registration', 'success');
+                    this.showSetPasswordForm();
                 } else {
                     Utils.showToast('Login successful!', 'success');
-                    setAuthToken(response.token);
-                    setTimeout(() => window.location.href = '/summary.html', 1000);
+                    setTimeout(() => window.location.href = '/summary', 1000);
                 }
             } else {
                 throw new Error(response.error || 'Invalid OTP');
@@ -197,6 +207,38 @@ class LoginPage {
             this.clearOTPInputs();
         } finally {
             Utils.setLoading(submitBtn, false);
+        }
+    }
+
+    showSetPasswordForm() {
+        const otpContainer = document.getElementById('otp-container');
+        const setPasswordContainer = document.getElementById('set-password-container');
+        if (otpContainer) otpContainer.style.display = 'none';
+        if (setPasswordContainer) setPasswordContainer.style.display = 'block';
+    }
+
+    async handleSetPassword(e) {
+        e.preventDefault();
+        const pwd = document.getElementById('new_password')?.value || '';
+        const confirm = document.getElementById('confirm_password')?.value || '';
+        if (pwd.length < 6) {
+            Utils.showToast('Password must be at least 6 characters', 'error');
+            return;
+        }
+        if (pwd !== confirm) {
+            Utils.showToast('Passwords do not match', 'error');
+            return;
+        }
+        try {
+            const response = await ExunServices.api.apiRequest('/auth/complete', { method: 'POST', body: JSON.stringify({ username: this.currentEmail, password: pwd }) });
+            if (response.status === 'success') {
+                Utils.showToast('Signup complete. Redirecting...', 'success');
+                setTimeout(() => window.location.href = '/summary', 800);
+            } else {
+                Utils.showToast(response.error || 'Failed to set password', 'error');
+            }
+        } catch (err) {
+            Utils.showToast(err.message || 'Failed to set password', 'error');
         }
     }
 

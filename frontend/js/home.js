@@ -49,7 +49,7 @@ class HomePage {
 
     createEventCard(event) {
     const card = document.createElement('a');
-    card.href = `/${encodeURIComponent(event.name)}`;
+    card.href = `/${slugify(event.name)}`;
         card.className = 'event-card';
         card.onclick = (e) => {
             e.preventDefault();
@@ -110,8 +110,18 @@ class HomePage {
     }
 
     navigateToEvent(eventId) {
-        window.location.href = `/${encodeURIComponent(eventId)}`;
+    window.location.href = `/${slugify(eventId)}`;
     }
+}
+
+function slugify(text) {
+    return String(text)
+    .trim()
+    .toLowerCase()
+    .replace(/[:'/"\?\!\.,]+/g, '') 
+    .replace(/\s+/g, '-') 
+    .replace(/[^a-z0-9\-]/g, '') 
+    .replace(/-+/g, '-');
 }
 
 document.addEventListener('DOMContentLoaded', () => {

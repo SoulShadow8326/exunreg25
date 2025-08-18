@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Complete Signup | Exun 2025</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/complete.css">
+    <link rel="stylesheet" href="/css/toast.css">
+</head>
+<body data-page="complete">
+
+        <main class="login-page">
+            <div class="login-container">
+                <div class="login-header">
+                    <img src="/assets/exun.png" class="login-logo" />
+                    <h1 class="login-title">Complete your signup</h1>
+                    <p class="login-subtitle">Provide the remaining details to finish your account.</p>
+                </div>
+
+                <div class="complete-grid">
+                    <div id="profile-section" class="profile-panel">
+                        <form class="login-form" id="complete-profile-form">
+                            <div class="profile-grid">
+                                <div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="fullname">Full name</label>
+                                        <input class="form-input" id="fullname" name="fullname" type="text" required />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="phone_number">Phone number</label>
+                                        <input class="form-input" id="phone_number" name="phone_number" type="tel" required />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="principals_email">Principal's email</label>
+                                        <input class="form-input" id="principals_email" name="principals_email" type="email" required />
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="institution_name">Institution name</label>
+                                        <input class="form-input" id="institution_name" name="institution_name" type="text" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="address">Address</label>
+                                        <input class="form-input" id="address" name="address" type="text" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="principals_name">Principal's name</label>
+                                        <input class="form-input" id="principals_name" name="principals_name" type="text" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <button class="login-btn" type="button" id="save-profile">Save profile</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div id="message" style="margin-top:12px"></div>
+            </div>
+        </main>
+
+    <div id="footer-container"></div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/utils.js"></script>
+    <script src="/js/login.js"></script>
+    <script>
+        async function saveProfile() {
+            const payload = {
+                fullname: document.getElementById('fullname')?.value || '',
+                phone_number: document.getElementById('phone_number')?.value || '',
+                principals_email: document.getElementById('principals_email')?.value || '',
+                individual: (document.getElementById('individual') && document.getElementById('individual').value) || '',
+                institution_name: document.getElementById('institution_name')?.value || '',
+                address: document.getElementById('address')?.value || '',
+                principals_name: document.getElementById('principals_name')?.value || '',
+            };
+                try {
+                const resp = await ExunServices.api.apiRequest('/complete_api', { method: 'POST', body: JSON.stringify(payload) });
+                if (resp.status === 'success') {
+                    Utils.showToast('Profile saved.', 'success');
+                } else {
+                    Utils.showToast(resp.error || 'Failed to save profile.', 'error');
+                }
+            } catch (err) {
+                document.getElementById('message').textContent = err.message || 'Failed to save profile.';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+
+            document.getElementById('save-profile').addEventListener('click', (e) => {
+                e.preventDefault();
+                saveProfile();
+            });
+
+            document.getElementById('complete-auth-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const username = document.getElementById('username').value.trim();
+                const password = document.getElementById('password').value;
+                try {
+                    const resp = await ExunServices.api.apiRequest('/auth/complete', { method: 'POST', body: JSON.stringify({ username, password }) });
+                    if (resp.status === 'success') {
+                        Utils.showToast('Signup complete. Redirecting to summary...', 'success');
+                        setTimeout(() => window.location.href = '/summary', 800);
+                    } else {
+                        Utils.showToast(resp.error || 'Failed to complete signup.', 'error');
+                    }
+                } catch (err) {
+                    Utils.showToast(err.message || 'Failed to complete signup.', 'error');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

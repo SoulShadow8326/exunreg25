@@ -13,6 +13,7 @@ type Response struct {
 	Data    interface{} `json:"data,omitempty"`
 	Error   string      `json:"error,omitempty"`
 }
+
 func IsAuthenticated(r *http.Request) bool {
 	emailCookie, err := r.Cookie("email")
 	if err != nil || emailCookie.Value == "" {
@@ -50,16 +51,7 @@ func Logger(next http.Handler) http.Handler {
 
 		duration := time.Since(start)
 
-		log.Printf("%s - [%s] \"%s %s %s\" %d %s \"%s\"",
-			r.RemoteAddr,
-			start.Format(time.RFC1123),
-			r.Method,
-			r.URL.Path,
-			r.Proto,
-			wrapped.statusCode,
-			duration,
-			r.UserAgent(),
-		)
+		log.Printf("%s %s %d %s", r.Method, r.URL.Path, wrapped.statusCode, duration)
 	})
 }
 

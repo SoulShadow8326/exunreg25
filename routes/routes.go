@@ -51,6 +51,16 @@ func SetupRoutes() *http.ServeMux {
 		case "/summary":
 			http.ServeFile(w, r, "./frontend/summary.html")
 			return
+		case "/signup":
+			if !middleware.IsAuthenticated(r) {
+				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				return
+			}
+			http.ServeFile(w, r, "./frontend/complete.html")
+			return
+		case "/complete":
+			http.ServeFile(w, r, "./frontend/complete.html")
+			return
 		case "/brochure":
 			http.ServeFile(w, r, "./frontend/brochure.html")
 			return
@@ -74,6 +84,11 @@ func SetupRoutes() *http.ServeMux {
 						if err := json.Unmarshal(top["events"], &eventsMap); err == nil {
 							for name := range eventsMap {
 								if name == decoded || slugify(name) == decoded {
+									canonical := slugify(name)
+									if decoded != canonical {
+										http.Redirect(w, r, "/"+canonical, http.StatusMovedPermanently)
+										return
+									}
 									http.ServeFile(w, r, "./frontend/event-detail.html")
 									return
 								}
@@ -91,7 +106,7 @@ func SetupRoutes() *http.ServeMux {
 	mux.HandleFunc("/api/auth/send-otp", handlers.SendOTP)
 	mux.HandleFunc("/api/auth/verify-otp", handlers.VerifyOTP)
 	mux.HandleFunc("/api/auth/logout", handlers.Logout)
-	mux.HandleFunc("/api/auth/complete-signup", handlers.CompleteSignup)
+	mux.HandleFunc("/api/auth/complete", handlers.CompleteSignup)
 
 	mux.HandleFunc("/api/users/register", handlers.RegisterUser)
 	mux.HandleFunc("/api/users/login", handlers.LoginUser)
@@ -109,10 +124,10 @@ func SetupRoutes() *http.ServeMux {
 	mux.Handle("/api/submit_registrations", middleware.AuthRequired(submitRegHandler))
 
 	completeSignupPageHandler := http.HandlerFunc(handlers.CompleteSignupPage)
-	mux.Handle("/api/complete_signup", middleware.AuthRequired(completeSignupPageHandler))
+	mux.Handle("/api/complete", middleware.AuthRequired(completeSignupPageHandler))
 
 	completeSignupAPIHandler := http.HandlerFunc(handlers.CompleteSignupAPI)
-	mux.Handle("/api/complete_signup_api", middleware.AuthRequired(completeSignupAPIHandler))
+	mux.Handle("/api/complete_api", middleware.AuthRequired(completeSignupAPIHandler))
 
 	userProfileHandler := http.HandlerFunc(handlers.GetUserProfileData)
 	mux.Handle("/api/user/profile", middleware.AuthRequired(userProfileHandler))
@@ -133,6 +148,9 @@ func SetupRoutes() *http.ServeMux {
 
 	adminStatsHandler := http.HandlerFunc(handlers.GetAdminStats)
 	mux.Handle("/api/admin/stats", middleware.AuthRequired(adminStatsHandler))
+
+	adminConfigHandler := http.HandlerFunc(handlers.GetAdminConfig)
+	mux.Handle("/api/admin/config", middleware.AuthRequired(adminConfigHandler))
 
 	adminEventHandler := http.HandlerFunc(handlers.GetAdminEvent)
 	mux.Handle("/api/admin/events/", middleware.AuthRequired(adminEventHandler))

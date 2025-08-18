@@ -39,6 +39,36 @@
     transition: color 0.15s;
 }
 
+.navbar__link.btn--primary,
+.btn--primary.navbar__link {
+    /* match regular navbar link sizing so spacing is consistent */
+    padding: 0 18px;
+    height: 48px;
+    line-height: 48px;
+    color: var(--white) !important;
+    font-weight: 600;
+}
+
+/* Ensure primary buttons keep their primary appearance on hover/active */
+.navbar__link.btn--primary:hover,
+.navbar__link.btn--primary.navbar__link--active {
+    color: #ffffff !important;
+    background: var(--exun-blue) !important;
+}
+
+/* Remove decorative underline for primary buttons */
+.navbar__link.btn--primary::after,
+.navbar__link.btn--primary:hover::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* Suppress focus outline for primary action buttons (kept explicit for accessibility review) */
+.navbar__link.btn--primary:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 
 .navbar__link:hover,
 .navbar__link--active {
@@ -84,4 +114,14 @@
         gap: 20px;
         font-size: 14px;
     }
+}
+
+[data-nav="auth"] {
+    outline: none !important;
+}
+
+[data-nav="auth"]:focus,
+[data-nav="auth"]:focus-within {
+    outline: none !important;
+    box-shadow: none !important;
 }

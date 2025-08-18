@@ -14,7 +14,17 @@ class Navigation {
         try {
             if (ExunServices.api.isAuthenticated()) {
                 const response = await ExunServices.api.apiRequest('/auth/profile');
-                this.currentUser = response.data;
+                if (response && response.status === 'success') {
+                    this.currentUser = response.data;
+                } else {
+                    if (response && response.error === 'Complete signup required') {
+                        window.location.href = '/complete_signup';
+                        return;
+                    }
+                    ExunServices.api.clearAuthToken();
+                    window.location.href = '/login';
+                    return;
+                }
             }
         } catch (error) {
             console.error('Failed to load user state:', error);
@@ -35,11 +45,11 @@ class Navigation {
         if (this.currentUser) {
             authContainer.innerHTML = `
                 <a href="/summary" class="navbar__link">Registration Summary</a>
-                <button class="navbar__link" data-action="logout">Logout</button>
+                <button class="btn btn--primary navbar__link" data-action="logout">Logout</button>
             `;
         } else {
             authContainer.innerHTML = `
-                <a href="/login" class="navbar__link">Login</a>
+                <button class="btn btn--primary navbar__link" data-action="login">Login</button>
             `;
         }
     }
@@ -81,6 +91,14 @@ class Navigation {
             logoutBtn.addEventListener('click', async (e) => {
                 e.preventDefault();
                 await this.handleLogout();
+            });
+        }
+
+        const loginBtn = document.querySelector('[data-action="login"]');
+        if (loginBtn) {
+            loginBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                window.location.href = '/login';
             });
         }
 
@@ -149,5 +167,12 @@ class Navigation {
 window.Navigation = Navigation;
 
 document.addEventListener('DOMContentLoaded', () => {
-    window.nav = new Navigation();
+    const tryInit = () => {
+        if (document.querySelector('[data-nav="auth"]')) {
+            window.nav = new Navigation();
+        } else {
+            setTimeout(tryInit, 50);
+        }
+    };
+    tryInit();
 });

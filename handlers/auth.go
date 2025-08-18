@@ -199,7 +199,23 @@ func (ah *AuthHandler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 
 	user, err := ah.db.Get("users", req.Email)
 	needsSignup := true
-	if err == nil {
+	if err != nil {
+		placeholder := &db.User{
+			Username:      req.Email,
+			Email:         req.Email,
+			PasswordHash:  "",
+			Registrations: make(map[string][]db.Participant),
+			CreatedAt:     time.Now(),
+			UpdatedAt:     time.Now(),
+		}
+		if cerr := ah.db.Create("users", placeholder); cerr != nil {
+			fmt.Printf("failed to create placeholder user for %s: %v\n", req.Email, cerr)
+		} else {
+			user = placeholder
+		}
+	}
+
+	if user != nil {
 		u := user.(*db.User)
 		if u.PasswordHash != "" {
 			needsSignup = false
@@ -304,16 +320,7 @@ func (ah *AuthHandler) CompleteSignup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	email := ah.getAuthenticatedUser(r)
-	_, err := ah.db.Get("users", email)
-	if err == nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusConflict)
-		json.NewEncoder(w).Encode(Response{
-			Status: "error",
-			Error:  "User already exists",
-		})
-		return
-	}
+
 	var signupData struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
@@ -328,19 +335,59 @@ func (ah *AuthHandler) CompleteSignup(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
-	user := &db.User{
-		Username:     signupData.Username,
-		Email:        email,
-		PasswordHash: ah.hashPassword(signupData.Password),
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+
+	existing, err := ah.db.Get("users", email)
+	if err != nil {
+		user := &db.User{
+			Username:     signupData.Username,
+			Email:        email,
+			PasswordHash: ah.hashPassword(signupData.Password),
+			CreatedAt:    time.Now(),
+			UpdatedAt:    time.Now(),
+		}
+		if err := ah.db.Create("users", user); err != nil {
+			fmt.Printf("Create user error: %v\n", err)
+			response := Response{
+				Status: "error",
+				Error:  fmt.Sprintf("Failed to create user: %v", err),
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+		fmt.Printf("User created: %s (%s)\n", user.Username, user.Email)
+		response := Response{
+			Status:  "success",
+			Message: "Signup completed successfully",
+			Data:    user,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+		return
 	}
 
-	if err := ah.db.Create("users", user); err != nil {
-		fmt.Printf("Create user error: %v\n", err)
+	u := existing.(*db.User)
+	if u.PasswordHash != "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(Response{
+			Status: "error",
+			Error:  "User already exists",
+		})
+		return
+	}
+
+	u.Username = signupData.Username
+	u.PasswordHash = ah.hashPassword(signupData.Password)
+	u.UpdatedAt = time.Now()
+
+	if err := ah.db.Update("users", email, u); err != nil {
+		fmt.Printf("Update user error: %v\n", err)
 		response := Response{
 			Status: "error",
-			Error:  "Failed to create user",
+			Error:  fmt.Sprintf("Failed to update user: %v", err),
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -348,14 +395,12 @@ func (ah *AuthHandler) CompleteSignup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("User created: %s (%s)\n", user.Username, user.Email)
-
+	fmt.Printf("User completed signup: %s (%s)\n", u.Username, u.Email)
 	response := Response{
 		Status:  "success",
 		Message: "Signup completed successfully",
-		Data:    user,
+		Data:    u,
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)

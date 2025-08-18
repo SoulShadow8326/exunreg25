@@ -8,7 +8,7 @@ class SummaryPage {
     async init() {
         if (!ExunServices.api.isAuthenticated()) {
             Utils.showToast('Please log in to view your summary', 'error');
-            setTimeout(() => window.location.href = '/login.html', 2000);
+            setTimeout(() => window.location.href = '/login', 2000);
             return;
         }
 
@@ -30,6 +30,14 @@ class SummaryPage {
         } catch (error) {
             console.error('Failed to load summary data:', error);
             Utils.showToast('Failed to load summary data', 'error');
+            if (error && error.message && error.message.toLowerCase().includes('complete signup')) {
+                setTimeout(() => window.location.href = '/complete_signup', 1000);
+                return;
+            }
+            if (error && error.message && error.message.toLowerCase().includes('user not found')) {
+                setTimeout(() => window.location.href = '/login', 1000);
+                return;
+            }
         }
     }
 
@@ -195,12 +203,7 @@ class SummaryPage {
             });
         }
 
-        const downloadCertificateBtn = document.getElementById('download-certificate-btn');
-        if (downloadCertificateBtn) {
-            downloadCertificateBtn.addEventListener('click', () => {
-                this.downloadCertificate();
-            });
-        }
+
 
         const logoutBtn = document.getElementById('logout-btn');
         if (logoutBtn) {
@@ -226,18 +229,7 @@ class SummaryPage {
     }
 
     editProfile() {
-        Utils.showToast('Profile editing functionality coming soon!', 'info');
-    }
-
-    downloadCertificate() {
-        const confirmedRegistrations = this.registrations.filter(reg => reg.status === 'confirmed');
-        
-        if (confirmedRegistrations.length === 0) {
-            Utils.showToast('No confirmed registrations found for certificate download', 'warning');
-            return;
-        }
-        
-        Utils.showToast('Certificate download functionality coming soon!', 'info');
+    window.location.href = '/signup';
     }
 
     async handleLogout() {

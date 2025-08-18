@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"exunreg25/db"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -90,18 +91,27 @@ func SubmitRegistrations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	eventData, err := globalDB.Get("events", req.EventID)
+	var event *db.Event
 	if err != nil {
-		response := Response{
-			Status: "error",
-			Error:  "Event not found",
+		evt, jerr := loadEventFromJSON(req.EventID)
+		if jerr != nil || evt == nil {
+			response := Response{
+				Status: "error",
+				Error:  "Event not found",
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(response)
+			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(response)
-		return
+		event = evt
 	}
 
-	event := eventData.(*db.Event)
+	if eventData != nil {
+		if ev, ok := eventData.(*db.Event); ok {
+			event = ev
+		}
+	}
 	if !event.IndependentRegistration && user.Username != "" {
 		response := Response{
 			Status: "error",
@@ -231,4 +241,61 @@ func validateEmailFormat(email string) bool {
 	pattern := `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
 	matched, _ := regexp.MatchString(pattern, email)
 	return matched
+}
+
+func loadEventFromJSON(eventID string) (*db.Event, error) {
+	b, err := ioutil.ReadFile("./frontend/data/events.json")
+	if err != nil {
+		return nil, err
+	}
+	var top map[string]json.RawMessage
+	if err := json.Unmarshal(b, &top); err != nil {
+		return nil, err
+	}
+
+	var eventMap map[string]string
+	json.Unmarshal(top["events"], &eventMap)
+
+	var participantsMap map[string]interface{}
+	var eligibilityMap map[string]interface{}
+	var individualMap map[string]interface{}
+
+	json.Unmarshal(top["participants"], &participantsMap)
+	json.Unmarshal(top["eligibility"], &eligibilityMap)
+	json.Unmarshal(top["individual"], &individualMap)
+
+	for name, image := range eventMap {
+		if name == eventID || slugify(name) == eventID {
+			evt := &db.Event{
+				ID:    name,
+				Name:  name,
+				Image: image,
+			}
+			if p, ok := participantsMap[name]; ok {
+				switch v := p.(type) {
+				case float64:
+					evt.Participants = int(v)
+				case int:
+					evt.Participants = v
+				}
+			} else {
+				evt.Participants = 1
+			}
+			if e, ok := eligibilityMap[name]; ok {
+				if bytes, err := json.Marshal(e); err == nil {
+					evt.Eligibility = string(bytes)
+				}
+			}
+			if ind, ok := individualMap[name]; ok {
+				if b, err := json.Marshal(ind); err == nil {
+					var flag bool
+					if err := json.Unmarshal(b, &flag); err == nil {
+						evt.IndependentRegistration = flag
+					}
+				}
+			}
+			return evt, nil
+		}
+	}
+	return nil, fmt.Errorf("event not found in JSON")
 }

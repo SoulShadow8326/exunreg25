@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -59,9 +60,18 @@ func NewAdminHandler(database *db.Database) *AdminHandler {
 }
 
 func (ah *AdminHandler) AdminPanel(w http.ResponseWriter, r *http.Request) {
-	email := globalAuthHandler.getAuthenticatedUser(r)
-	if email == "" || email != "exun@dpsrkp.net" {
+	if !globalAuthHandler.isAuthenticated(r) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	email := globalAuthHandler.getAuthenticatedUser(r)
+	if !isAdminEmail(email) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		http.ServeFile(w, r, "./frontend/admin.html")
 		return
 	}
 
@@ -73,8 +83,12 @@ func (ah *AdminHandler) AdminPanel(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ah *AdminHandler) GetAdminStats(w http.ResponseWriter, r *http.Request) {
+	if !globalAuthHandler.isAuthenticated(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	email := globalAuthHandler.getAuthenticatedUser(r)
-	if email == "" || email != "exun@dpsrkp.net" {
+	if !isAdminEmail(email) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -143,8 +157,12 @@ func (ah *AdminHandler) GetAdminStats(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ah *AdminHandler) GetEvent(w http.ResponseWriter, r *http.Request) {
+	if !globalAuthHandler.isAuthenticated(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	email := globalAuthHandler.getAuthenticatedUser(r)
-	if email == "" || email != "exun@dpsrkp.net" {
+	if !isAdminEmail(email) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -182,8 +200,12 @@ func (ah *AdminHandler) GetEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ah *AdminHandler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
+	if !globalAuthHandler.isAuthenticated(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	email := globalAuthHandler.getAuthenticatedUser(r)
-	if email == "" || email != "exun@dpsrkp.net" {
+	if !isAdminEmail(email) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -235,8 +257,12 @@ func (ah *AdminHandler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ah *AdminHandler) DeleteEvent(w http.ResponseWriter, r *http.Request) {
+	if !globalAuthHandler.isAuthenticated(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	email := globalAuthHandler.getAuthenticatedUser(r)
-	if email == "" || email != "exun@dpsrkp.net" {
+	if !isAdminEmail(email) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -262,8 +288,12 @@ func (ah *AdminHandler) DeleteEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ah *AdminHandler) GetUserDetails(w http.ResponseWriter, r *http.Request) {
+	if !globalAuthHandler.isAuthenticated(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	email := globalAuthHandler.getAuthenticatedUser(r)
-	if email == "" || email != "exun@dpsrkp.net" {
+	if !isAdminEmail(email) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -285,8 +315,12 @@ func (ah *AdminHandler) GetUserDetails(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ah *AdminHandler) GetEventRegistrations(w http.ResponseWriter, r *http.Request) {
+	if !globalAuthHandler.isAuthenticated(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	email := globalAuthHandler.getAuthenticatedUser(r)
-	if email == "" || email != "exun@dpsrkp.net" {
+	if !isAdminEmail(email) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -323,8 +357,12 @@ func (ah *AdminHandler) GetEventRegistrations(w http.ResponseWriter, r *http.Req
 }
 
 func (ah *AdminHandler) ExportData(w http.ResponseWriter, r *http.Request) {
+	if !globalAuthHandler.isAuthenticated(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 	email := globalAuthHandler.getAuthenticatedUser(r)
-	if email == "" || email != "exun@dpsrkp.net" {
+	if !isAdminEmail(email) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -441,4 +479,46 @@ func ExportData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	globalAdminHandler.ExportData(w, r)
+}
+
+func isAdminEmail(email string) bool {
+	if email == "" {
+		return false
+	}
+	admins := os.Getenv("ADMIN_EMAILS")
+	if admins == "" {
+		admins = os.Getenv("ADMIN_EMAIL")
+	}
+	if admins == "" {
+		admins = "exun@dpsrkp.net"
+	}
+	for _, a := range strings.Split(admins, ",") {
+		if strings.TrimSpace(strings.ToLower(a)) == strings.ToLower(email) {
+			return true
+		}
+	}
+	return false
+}
+
+func (ah *AdminHandler) GetAdminConfig(w http.ResponseWriter, r *http.Request) {
+	admins := os.Getenv("ADMIN_EMAILS")
+	if admins == "" {
+		admins = os.Getenv("ADMIN_EMAIL")
+	}
+	if admins == "" {
+		admins = "exun@dpsrkp.net"
+	}
+	resp := map[string]interface{}{
+		"admin_emails": admins,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
+func GetAdminConfig(w http.ResponseWriter, r *http.Request) {
+	if globalAdminHandler == nil {
+		http.Error(w, "Admin handler not initialized", http.StatusInternalServerError)
+		return
+	}
+	globalAdminHandler.GetAdminConfig(w, r)
 }

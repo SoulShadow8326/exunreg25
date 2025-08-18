@@ -8,13 +8,18 @@ class AdminPage {
     }
 
     async init() {
-        if (!ExunServices.api.isAdmin()) {
-            Utils.showToast('Access denied. Admin privileges required.', 'error');
-            setTimeout(() => window.location.href = '/login.html', 2000);
+        try {
+            await this.loadData();
+        } catch (err) {
+            const msg = (err && err.message) ? err.message.toLowerCase() : '';
+            if (msg.includes('401') || msg.includes('unauthorized')) {
+                Utils.showToast('Access denied. Admin privileges required.', 'error');
+                setTimeout(() => window.location.href = '/login', 2000);
+                return;
+            }
+            Utils.showToast('Failed to load admin data', 'error');
             return;
         }
-
-        await this.loadData();
         this.setupEventListeners();
         this.renderCurrentTab();
     }
@@ -24,9 +29,10 @@ class AdminPage {
             const response = await ExunServices.api.apiRequest('/admin/stats');
             this.stats = response.data || {};
             this.renderStats();
+            return;
         } catch (error) {
             console.error('Failed to load admin data:', error);
-            Utils.showToast('Failed to load admin data', 'error');
+            throw error;
         }
     }
 

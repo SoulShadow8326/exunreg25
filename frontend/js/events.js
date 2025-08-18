@@ -171,7 +171,7 @@ class EventsPage {
 
     createEventCard(event) {
     const card = document.createElement('a');
-    card.href = `/${encodeURIComponent(event.name)}`;
+    card.href = `/${slugify(event.name)}`;
         card.className = 'event-card';
         card.onclick = (e) => {
             e.preventDefault();
@@ -233,8 +233,18 @@ class EventsPage {
     }
 
     navigateToEvent(eventName) {
-        window.location.href = `/${encodeURIComponent(eventName)}`;
+    window.location.href = `/${slugify(eventName)}`;
     }
+}
+
+function slugify(text) {
+    return String(text)
+    .trim()
+    .toLowerCase()
+    .replace(/[:'/"\?\!\.,]+/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9\-]/g, '')
+    .replace(/-+/g, '-');
 }
 
 document.addEventListener('DOMContentLoaded', () => {

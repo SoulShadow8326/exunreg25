@@ -257,6 +257,9 @@ func (db *Database) Create(entity string, data interface{}) error {
 		}
 		query := `INSERT INTO users (username, email, password_hash, fullname, phone_number, principals_email, individual, institution_name, address, principals_name, registrations, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		_, err := db.Exec(query, user.Username, user.Email, user.PasswordHash, user.Fullname, user.PhoneNumber, user.PrincipalsEmail, user.Individual, user.InstitutionName, user.Address, user.PrincipalsName, user.marshalRegistrations(), now, now)
+		if err != nil {
+			log.Printf("db.Create(users) error: %v", err)
+		}
 		return err
 
 	case "events":
@@ -270,6 +273,9 @@ func (db *Database) Create(entity string, data interface{}) error {
 		_, err := db.Exec(query, event.ID, event.Name, event.Image, event.OpenToAll, event.Eligibility,
 			event.Participants, event.Mode, event.IndependentRegistration, event.Points, event.Dates,
 			event.DescriptionLong, event.DescriptionShort, now, now)
+		if err != nil {
+			log.Printf("db.Create(events) error: %v", err)
+		}
 		return err
 
 	case "registrations":
@@ -279,6 +285,9 @@ func (db *Database) Create(entity string, data interface{}) error {
 		}
 		query := `INSERT INTO registrations (event_id, user_id, team_name, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
 		_, err := db.Exec(query, reg.EventID, reg.UserID, reg.TeamName, reg.Status, now, now)
+		if err != nil {
+			log.Printf("db.Create(registrations) error: %v", err)
+		}
 		return err
 
 	default:
@@ -295,8 +304,11 @@ func (db *Database) Update(entity string, key string, data interface{}) error {
 		if !ok {
 			return fmt.Errorf("invalid user data")
 		}
-		query := `UPDATE users SET username = ?, fullname = ?, phone_number = ?, principals_email = ?, individual = ?, institution_name = ?, address = ?, principals_name = ?, registrations = ?, updated_at = ? WHERE email = ?`
-		_, err := db.Exec(query, user.Username, user.Fullname, user.PhoneNumber, user.PrincipalsEmail, user.Individual, user.InstitutionName, user.Address, user.PrincipalsName, user.marshalRegistrations(), now, key)
+		query := `UPDATE users SET username = ?, password_hash = ?, fullname = ?, phone_number = ?, principals_email = ?, individual = ?, institution_name = ?, address = ?, principals_name = ?, registrations = ?, updated_at = ? WHERE email = ?`
+		_, err := db.Exec(query, user.Username, user.PasswordHash, user.Fullname, user.PhoneNumber, user.PrincipalsEmail, user.Individual, user.InstitutionName, user.Address, user.PrincipalsName, user.marshalRegistrations(), now, key)
+		if err != nil {
+			log.Printf("db.Update(users) error: %v", err)
+		}
 		return err
 
 	case "events":
@@ -310,6 +322,9 @@ func (db *Database) Update(entity string, key string, data interface{}) error {
 		_, err := db.Exec(query, event.Name, event.Image, event.OpenToAll, event.Eligibility,
 			event.Participants, event.Mode, event.IndependentRegistration, event.Points, event.Dates,
 			event.DescriptionLong, event.DescriptionShort, now, key)
+		if err != nil {
+			log.Printf("db.Update(events) error: %v", err)
+		}
 		return err
 
 	case "registrations":
@@ -319,6 +334,9 @@ func (db *Database) Update(entity string, key string, data interface{}) error {
 		}
 		query := `UPDATE registrations SET event_id = ?, user_id = ?, team_name = ?, status = ?, updated_at = ? WHERE id = ?`
 		_, err := db.Exec(query, reg.EventID, reg.UserID, reg.TeamName, reg.Status, now, key)
+		if err != nil {
+			log.Printf("db.Update(registrations) error: %v", err)
+		}
 		return err
 
 	default:

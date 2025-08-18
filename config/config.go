@@ -8,16 +8,16 @@ import (
 )
 
 type Config struct {
-	DBPath string
-	Port string
-	AuthSalt string
+	DBPath       string
+	Port         string
+	AuthSalt     string
 	CookieSecure bool
-	SMTPHost string
-	SMTPPort string
+	SMTPHost     string
+	SMTPPort     string
 	SMTPUsername string
 	SMTPPassword string
-	FromEmail string
-	FromName string
+	FromEmail    string
+	FromName     string
 }
 
 func Load() (*Config, error) {
@@ -29,16 +29,16 @@ func Load() (*Config, error) {
 	}
 
 	config := &Config{
-		DBPath: getEnv("DB_PATH", "./data/exunreg25.db"),
-		Port: getEnv("PORT", "8080"),
-		AuthSalt: authSalt,
+		DBPath:       getEnv("DB_PATH", "./data/exunreg25.db"),
+		Port:         getEnv("PORT", "8080"),
+		AuthSalt:     authSalt,
 		CookieSecure: getEnvBool("COOKIE_SECURE", false),
-		SMTPHost: getEnv("SMTP_HOST", "smtp.gmail.com"),
-		SMTPPort: getEnv("SMTP_PORT", "587"),
+		SMTPHost:     getEnv("SMTP_HOST", "smtp.gmail.com"),
+		SMTPPort:     getEnv("SMTP_PORT", "587"),
 		SMTPUsername: getEnv("SMTP_USERNAME", ""),
 		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
-		FromEmail: getEnv("FROM_EMAIL", "noreply@exun.co"),
-		FromName: getEnv("FROM_NAME", "Exun Clan"),
+		FromEmail:    getEnv("FROM_EMAIL", "noreply@exun.co"),
+		FromName:     getEnv("FROM_NAME", "Exun Clan"),
 	}
 
 	return config, nil
