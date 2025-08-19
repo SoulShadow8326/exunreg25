@@ -25,6 +25,14 @@ func IsAuthenticated(r *http.Request) bool {
 	}
 	return true
 }
+
+func GetEmailFromCookie(r *http.Request) string {
+	emailCookie, err := r.Cookie("email")
+	if err != nil {
+		return ""
+	}
+	return emailCookie.Value
+}
 func CORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")

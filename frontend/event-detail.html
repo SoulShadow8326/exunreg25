@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event Details | Exun 2025</title>
+    <title>{{.Event.Name}} | Exun 2025</title>
     <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
     
     <link rel="stylesheet" href="/css/main.css">
@@ -13,52 +13,115 @@
     <link rel="stylesheet" href="/css/footer.css">
 </head>
 <body data-page="event-detail">
-    <div id="navbar-container"></div>
+    {{template "navbar" .}}
 
     <main class="event-detail-page">
         <div class="event-detail-header">
             <div class="container">
-                <h1 class="event-detail-title" id="event-title">Loading...</h1>
-                <p class="event-detail-subtitle" id="event-subtitle">Event Details</p>
+                <h1 class="event-detail-title">{{.Event.Name}}</h1>
+                <p class="event-detail-subtitle">Event Details</p>
             </div>
         </div>
         
         <div class="container">
             <div class="event-detail-content">
                 <div class="event-detail-main">
-                    <div id="event-description" class="event-description">
-                        <div class="loading-placeholder">Loading event details...</div>
+                    <div class="event-detail__header">
+                        <div class="event-detail__image-container">
+                            <img src="{{.Event.Image}}" alt="{{.Event.Name}}" class="event-detail__image" />
+                        </div>
+                        <div class="event-detail__header-content">
+                            <h1 class="event-detail__title">{{.Event.Name}}</h1>
+                            <div class="event-detail__meta">
+                                <span class="event-detail__mode">{{.Event.Mode}}</span>
+                                <span class="event-detail__participants">{{.Event.Participants}} participants</span>
+                                <span class="event-detail__points">{{.Event.Points}} Points</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="event-description">
+                        <h2>About This Event</h2>
+                        <div class="description-content">
+                            {{if .Event.DescriptionShort}}<p class="description-short">{{.Event.DescriptionShort}}</p>{{end}}
+                            {{if .Event.DescriptionLong}}<div class="description-long">{{.Event.DescriptionLong}}</div>{{end}}
+                            {{if not .Event.DescriptionShort}}{{if not .Event.DescriptionLong}}<p>Details coming soon.</p>{{end}}{{end}}
+                        </div>
                     </div>
                 </div>
                 
                 <div class="event-detail-sidebar">
                     <div class="event-info-card">
                         <h3 class="event-info-card__title">Event Information</h3>
-                        <div id="event-info">
-                            <div class="loading-placeholder">Loading...</div>
+                        <div class="event-info">
+                            <div class="event-info-item">
+                                <span class="event-info-label">Mode:</span>
+                                <span class="event-info-value">{{.Event.Mode}}</span>
+                            </div>
+                            <div class="event-info-item">
+                                <span class="event-info-label">Participants:</span>
+                                <span class="event-info-value">{{.Event.Participants}}</span>
+                            </div>
+                            <div class="event-info-item">
+                                <span class="event-info-label">Eligibility:</span>
+                                <span class="event-info-value">{{.Event.EligibilityText}}</span>
+                            </div>
+                            <div class="event-info-item">
+                                <span class="event-info-label">Points:</span>
+                                <span class="event-info-value">{{.Event.Points}}</span>
+                            </div>
+                            <div class="event-info-item">
+                                <span class="event-info-label">Dates:</span>
+                                <span class="event-info-value">{{if .Event.Dates}}{{.Event.Dates}}{{else}}TBA{{end}}</span>
+                            </div>
+                            <div class="event-info-item">
+                                <span class="event-info-label">Registration:</span>
+                                <span class="event-info-value">{{if .Event.Individual}}Individual{{else}}Team{{end}}</span>
+                            </div>
                         </div>
                     </div>
                     
-                    <div class="registration-card" id="registration-card">
-                        <div class="registration-status registration-status--open" id="registration-status">
-                            Registration Open
+                    <div class="registration-card">
+                        <h3>Ready to Register?</h3>
+                        <div style="margin-top:0.75rem;">
+                            <button class="btn btn--primary" id="register-event-btn">Register</button>
                         </div>
-                        <div class="registration-deadline" id="registration-deadline">
-                            Deadline: TBD
+                        <div style="margin-top:0.5rem; display:flex; justify-content:center;">
+                            <button class="btn" onclick="window.location.href='/events'">← Back to events</button>
                         </div>
-                        <button class="btn btn--primary w-full" id="register-btn">
-                            Register Now
-                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </main>
-    <div id="footer-container" style="padding-top: 5vw;"></div>
+    {{template "footer" .}}
     
     <script src="/js/api.js"></script>
     <script src="/js/utils.js"></script>
     <script src="/js/navigation.js"></script>
-    <script src="/js/event-detail.js"></script>
+    <script>
+        document.getElementById('register-event-btn').addEventListener('click', async function() {
+            if (!ExunServices.api.isAuthenticated()) {
+                window.location.href = '/login';
+                return;
+            }
+            try {
+                const response = await ExunServices.api.apiRequest('/submit_registrations', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        id: '{{.Event.ID}}',
+                        data: [{ name: 'User Name', email: 'user@example.com', class: 10, phone: '1234567890' }]
+                    })
+                });
+                if (response.status === 'success') {
+                    alert('Registration successful!');
+                } else {
+                    alert('Registration failed: ' + response.error);
+                }
+            } catch (error) {
+                alert('Registration failed: ' + error.message);
+            }
+        });
+    </script>
 </body>
 </html>

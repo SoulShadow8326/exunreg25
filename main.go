@@ -17,6 +17,7 @@ import (
 	"exunreg25/mail"
 	"exunreg25/middleware"
 	"exunreg25/routes"
+	"exunreg25/templates"
 )
 
 func init() {
@@ -84,6 +85,10 @@ func main() {
 	handlers.SetGlobalAuthHandler(authHandler)
 	handlers.SetGlobalAdminHandler(adminHandler)
 	handlers.SetGlobalDB(database)
+
+	if err := templates.InitTemplates(); err != nil {
+		log.Fatal("Failed to initialize templates:", err)
+	}
 
 	handler := routes.SetupRoutes()
 	wrappedHandler := middleware.CORS(middleware.Logger(handler))

@@ -62,11 +62,10 @@
             </div>
         </main>
 
-    <div id="footer-container"></div>
+    {{template "footer" .}}
 
     <script src="/js/api.js"></script>
     <script src="/js/utils.js"></script>
-    <script src="/js/login.js"></script>
     <script>
         async function saveProfile() {
             const payload = {
@@ -91,27 +90,9 @@
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
-
             document.getElementById('save-profile').addEventListener('click', (e) => {
                 e.preventDefault();
                 saveProfile();
-            });
-
-            document.getElementById('complete-auth-form').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const username = document.getElementById('username').value.trim();
-                const password = document.getElementById('password').value;
-                try {
-                    const resp = await ExunServices.api.apiRequest('/auth/complete', { method: 'POST', body: JSON.stringify({ username, password }) });
-                    if (resp.status === 'success') {
-                        Utils.showToast('Signup complete. Redirecting to summary...', 'success');
-                        setTimeout(() => window.location.href = '/summary', 800);
-                    } else {
-                        Utils.showToast(resp.error || 'Failed to complete signup.', 'error');
-                    }
-                } catch (err) {
-                    Utils.showToast(err.message || 'Failed to complete signup.', 'error');
-                }
             });
         });
     </script>

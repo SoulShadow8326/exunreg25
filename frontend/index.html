@@ -4,21 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home | Exun 2025 Registration</title>
-    <link rel="icon" href="assets/favicon.ico" type="image/x-icon">
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/navbar.css">
-    <link rel="stylesheet" href="css/footer.css">
-    <link rel="stylesheet" href="css/home.css">
-    <link rel="stylesheet" href="css/event-card.css">
-    <link rel="stylesheet" href="css/toast.css">
+    <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/navbar.css">
+    <link rel="stylesheet" href="/css/footer.css">
+    <link rel="stylesheet" href="/css/home.css">
+    <link rel="stylesheet" href="/css/event-card.css">
+    <link rel="stylesheet" href="/css/toast.css">
 </head>
 <body data-page="home">
-    <div id="navbar-container"></div>
+    {{template "navbar" .}}
     
     <main class="hero">
         <section class="hero__main">
             <div class="hero__content">
-                <h1 class="hero__title" style="color:#2977f5">Exun 2025</h1>
+                <h1 class="hero__title" style="color:#2977f5; font-weight:700;">Exun 2025</h1>
                 <h2 class="hero__subtitle" style="color:#383838">The biggest tech symposium of India</h2>
                 
                 <p class="hero__description">
@@ -40,30 +40,32 @@
             </div>
             
             <div class="hero__image">
-                <img src="assets/mainillus.webp" alt="Exun 2025 Illustration">
+                <img src="/assets/mainillus.webp" alt="Exun 2025 Illustration">
             </div>
         </section>
         
         <section class="events-section" style="padding-top: 10vw;">
             <h2 class="events-section__title">Our Events</h2>
             <div class="events-grid" id="events-grid">
-                <div class="loading-placeholder">Loading events...</div>
+                {{range .Events}}
+                <a href="/{{.Slug}}" class="event-card">
+                    <img src="{{.Image}}" alt="{{.Name}}" class="event-card__image" />
+                    <h3 class="event-card__title">{{.Name}}</h3>
+                    <div class="event-card__details">
+                        <span class="event-card__mode">{{.Mode}}</span>
+                        <span class="event-card__participants">{{.Participants}} participants</span>
+                        <span class="event-card__eligibility">{{.EligibilityText}}</span>
+                    </div>
+                </a>
+                {{end}}
             </div>
         </section>
     </main>
     
-    <div id="footer-container" style="padding-top: 5vw;"></div>
+    {{template "footer" .}}
     
     <script src="/js/api.js"></script>
-    <script src="js/utils.js"></script>
-    <script src="js/navigation.js"></script>
-    <script src="js/home.js"></script>
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', async function() {
-            await loadComponent('components/navbar.html', document.getElementById('navbar-container'));
-            await loadComponent('components/footer.html', document.getElementById('footer-container'));
-        });
-    </script>
+    <script src="/js/utils.js"></script>
+    <script src="/js/navigation.js"></script>
 </body>
 </html>

@@ -1,14 +1,29 @@
+{{define "navbar"}}
 <nav class="navbar">
     <div class="navbar__brand">
         <a href="/">
-            <img class="navbar__logo" src="assets/exun.png" alt="Exun Clan" />
+            <img class="navbar__logo" src="/assets/exun.png" alt="Exun Clan" />
         </a>
     </div>
     <div class="navbar__nav">
-        <a href="/" class="navbar__link">Home</a>
-        <a href="/events" class="navbar__link">Events</a>
+    <a href="/" class="navbar__link {{if .IsHome}}navbar__link--active{{end}}">Home</a>
+    <a href="/events" class="navbar__link {{if .IsEvents}}navbar__link--active{{end}}">Events</a>
         <a href="https://docs.google.com/document/d/1h_sWUuvQlLoiwf4R7kGO7_VQi-mnqlbGrBu6wyAGEhg/edit?usp=sharing" class="navbar__link" target="_blank">Schedule</a>
-        <div data-nav="admin"></div>
-        <div data-nav="auth"></div>
+
+        <div data-nav="admin">
+            {{if .IsAdmin}}
+            <a href="/admin" class="navbar__link">Admin</a>
+            {{end}}
+        </div>
+
+        <div data-nav="auth">
+            {{if .IsAuthenticated}}
+            <a href="/summary" class="navbar__link">Registration Summary</a>
+            <button class="btn btn--primary navbar__link" data-action="logout">Logout</button>
+            {{else}}
+            <button class="btn btn--primary navbar__link" data-action="login">Login</button>
+            {{end}}
+        </div>
     </div>
 </nav>
+{{end}}

@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="/css/toast.css">
 </head>
 <body data-page="events">
-    <div id="navbar-container"></div>
+    {{template "navbar" .}}
     
     <main class="events-page">
         <div class="container">
@@ -26,33 +26,34 @@
             </header>
             
             <div class="events-page__filters" id="event-filters">
-                <div class="loading-placeholder">Loading filters...</div>
+                {{range .Categories}}
+                <button class="filter-btn" data-filter="{{.Key}}">{{.Name}}</button>
+                {{end}}
             </div>
             
             <div class="events-page__content">
                 <div class="events-page__grid" id="events-grid">
-                    <div class="loading-placeholder">Loading events...</div>
+                    {{range .Events}}
+                    <a href="/{{.Slug}}" class="event-card">
+                        <img src="{{.Image}}" alt="{{.Name}}" class="event-card__image" />
+                        <h3 class="event-card__title">{{.Name}}</h3>
+                        <div class="event-card__details">
+                            <span class="event-card__mode">{{.Mode}}</span>
+                            <span class="event-card__participants">{{.Participants}} participants</span>
+                            <span class="event-card__eligibility">{{.EligibilityText}}</span>
+                        </div>
+                    </a>
+                    {{end}}
                 </div>
             </div>
         </div>
     </main>
     
-    <div id="footer-container"></div>
+    {{template "footer" .}}
     
     <script src="/js/api.js"></script>
     <script src="/js/utils.js"></script>
     <script src="/js/navigation.js"></script>
     <script src="/js/events.js"></script>
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', async function() {
-            await Utils.loadComponent('/components/navbar.html', document.getElementById('navbar-container'));
-            await Utils.loadComponent('/components/footer.html', document.getElementById('footer-container'));
-        });
-            document.addEventListener('DOMContentLoaded', async function() {
-                await Utils.loadComponent('components/navbar.html', document.getElementById('navbar-container'));
-                await Utils.loadComponent('components/footer.html', document.getElementById('footer-container'));
-            });
-    </script>
 </body>
 </html>

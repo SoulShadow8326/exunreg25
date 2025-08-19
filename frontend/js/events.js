@@ -14,8 +14,10 @@ class EventsPage {
     }
 
     async loadEvents() {
+        console.log('EventsPage: loadEvents starting');
         try {
             const response = await ExunServices.api.apiRequest('/events');
+            console.log('EventsPage: /api/events response', response && response.data && response.data.length);
             this.events = response.data || [];
             this.events = this.events.map(event => ({
                 ...event,
@@ -23,11 +25,13 @@ class EventsPage {
             }));
             this.filteredEvents = [...this.events];
         } catch (error) {
+            console.warn('EventsPage: /api/events failed, falling back to static JSON', error);
             console.error('Failed to load events from API:', error);
             Utils.showToast('Loading events from backup...', 'info');
             try {
-                const localResponse = await fetch('data/events.json');
+                const localResponse = await fetch('/data/events.json');
                 const json = await localResponse.json();
+                console.log('EventsPage: loaded fallback /data/events.json, events count=', Object.keys(json.events||{}).length);
                 this.events = Object.entries(json.events).map(([name, image]) => ({
                     id: name,
                     name,

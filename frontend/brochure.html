@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="/css/toast.css">
 </head>
 <body data-page="brochure">
-    <div id="navbar-container"></div>
+    {{template "navbar" .}}
     
     <main class="brochure-page">
         <div class="container">
@@ -43,17 +43,9 @@
         </div>
     </main>
     
-    <div id="footer-container"></div>
+    {{template "footer" .}}
     
     <script src="/js/api.js"></script>
     <script src="/js/utils.js"></script>
-    <script src="/js/navigation.js"></script>
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', async function() {
-            await Utils.loadComponent('components/navbar.html', document.getElementById('navbar-container'));
-            await Utils.loadComponent('components/footer.html', document.getElementById('footer-container'));
-        });
-    </script>
 </body>
 </html>

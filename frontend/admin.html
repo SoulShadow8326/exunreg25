@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="/css/toast.css">
 </head>
 <body data-page="admin">
-    <div id="navbar-container"></div>
+    {{template "navbar" .}}
     
     <main class="admin-page">
         <div class="admin-header">
@@ -30,16 +30,56 @@
                         <span class="admin-card__icon">⌘</span>
                     </div>
                     <div class="admin-card__content">
-                        <div class="stat-item">
+                                                <div class="stat-item">
                             <span class="stat-label">Total Events:</span>
-                            <span class="stat-value" id="total-events">0</span>
+                            <span class="stat-value">{{.Stats.TotalEvents}}</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">Active Events:</span>
-                            <span class="stat-value" id="active-events">0</span>
+                            <span class="stat-value">{{.Stats.TotalEvents}}</span>
                         </div>
                     </div>
                 </div>
+                
+                <div class="admin-card">
+                    <div class="admin-card__header">
+                        <h3 class="admin-card__title">Users</h3>
+                        <span class="admin-card__icon">⌘</span>
+                    </div>
+                    <div class="admin-card__content">
+                        <div class="stat-item">
+                            <span class="stat-label">Total Users:</span>
+                            <span class="stat-value">{{.Stats.TotalUsers}}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Registrations:</span>
+                            <span class="stat-value">{{.Stats.TotalRegistrations}}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="admin-tabs">
+                <button class="admin-tab admin-tab--active" data-tab="overview">Overview</button>
+                <button class="admin-tab" data-tab="events">Events</button>
+                <button class="admin-tab" data-tab="users">Users</button>
+                <button class="admin-tab" data-tab="registrations">Registrations</button>
+            </div>
+            
+            <div class="admin-content" id="admin-content">
+                <div class="admin-section" id="overview-section">
+                    <h2>System Overview</h2>
+                    <div class="admin-grid">
+                        {{range $eventID, $stats := .Stats.EventStats}}
+                        <div class="admin-card">
+                            <h4>{{$stats.EventName}}</h4>
+                            <p>Participants: {{$stats.TotalParticipants}}</p>
+                            <p>Teams: {{$stats.TotalTeams}}</p>
+                        </div>
+                        {{end}}
+                    </div>
+                </div>
+            </div>
                 
                 <div class="admin-card">
                     <div class="admin-card__header">
@@ -89,7 +129,7 @@
         </div>
     </main>
     
-    <div id="footer-container"></div>
+    {{template "footer" .}}
     
     <div id="admin-modal" class="admin-modal">
         <div class="admin-modal__content" id="modal-content">
@@ -100,12 +140,5 @@
     <script src="/js/utils.js"></script>
     <script src="/js/navigation.js"></script>
     <script src="/js/admin.js"></script>
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', async function() {
-            await Utils.loadComponent('components/navbar.html', document.getElementById('navbar-container'));
-            await Utils.loadComponent('components/footer.html', document.getElementById('footer-container'));
-        });
-    </script>
 </body>
 </html>
