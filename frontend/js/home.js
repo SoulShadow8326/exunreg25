@@ -18,7 +18,7 @@ class HomePage {
             console.error('Failed to load events from API:', error);
             Utils.showToast('Loading events from backup...', 'info');
             try {
-                const localResponse = await fetch('data/events.json');
+                    const localResponse = await fetch('/data/events.json');
                 const json = await localResponse.json();
                 this.events = Object.entries(json.events).map(([name, image]) => ({
                     id: name.replace(/\s+/g, '-').toLowerCase(),
@@ -80,13 +80,13 @@ class HomePage {
 
         if (exploreBtn) {
             exploreBtn.addEventListener('click', () => {
-                window.location.href = '/events.html';
+                window.location.href = '/events';
             });
         }
 
         if (brochureBtn) {
             brochureBtn.addEventListener('click', () => {
-                window.location.href = '/brochure.html';
+                window.location.href = '/brochure';
             });
         }
 

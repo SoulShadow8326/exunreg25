@@ -5,9 +5,9 @@ class Navigation {
     }
 
     async init() {
-        await this.loadUserState();
-        this.updateNavigation();
-        this.setupEventListeners();
+    this.setupEventListeners();
+    await this.loadUserState();
+    this.updateNavigation();
     }
 
     async loadUserState() {
@@ -99,6 +99,27 @@ class Navigation {
             loginBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 window.location.href = '/login';
+            });
+        }
+
+        if (!this._delegatedClickAttached) {
+            this._delegatedClickAttached = true;
+            document.addEventListener('click', (e) => {
+                const loginTarget = e.target.closest('[data-action="login"]');
+                if (loginTarget) {
+                    e.preventDefault();
+                    window.location.href = '/login';
+                    return;
+                }
+                const logoutTarget = e.target.closest('[data-action="logout"]');
+                if (logoutTarget) {
+                    e.preventDefault();
+                    try {
+                        this.handleLogout();
+                    } catch (err) {
+                        console.error('Delegated logout failed', err);
+                    }
+                }
             });
         }
 

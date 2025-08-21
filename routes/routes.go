@@ -62,6 +62,20 @@ func SetupRoutes() *http.ServeMux {
 			data.PageTitle = "Exun 2025"
 			if events, err := templates.LoadEventsFromJSON(); err == nil {
 				data.Events = events
+				cats := make(map[string]struct{})
+				for _, e := range events {
+					if e.Slug != "" {
+						if strings.Contains(e.Name, "Build") {
+							cats["build"] = struct{}{}
+						}
+						if strings.Contains(e.Name, "CubXL") {
+							cats["cubing"] = struct{}{}
+						}
+					}
+				}
+				for k := range cats {
+					data.Categories = append(data.Categories, templates.Category{Key: k, Name: strings.Title(k)})
+				}
 			}
 			templates.RenderTemplate(w, "index", data)
 			return
@@ -70,6 +84,21 @@ func SetupRoutes() *http.ServeMux {
 			data.PageTitle = "Events | Exun 2025"
 			if events, err := templates.LoadEventsFromJSON(); err == nil {
 				data.Events = events
+				cats := make(map[string]struct{})
+				for _, e := range events {
+					if strings.Contains(e.Name, "Build") {
+						cats["build"] = struct{}{}
+					}
+					if strings.Contains(e.Name, "CubXL") {
+						cats["cubing"] = struct{}{}
+					}
+					if strings.Contains(e.Name, "DomainSquare") {
+						cats["gaming"] = struct{}{}
+					}
+				}
+				for k := range cats {
+					data.Categories = append(data.Categories, templates.Category{Key: k, Name: strings.Title(k)})
+				}
 			}
 			templates.RenderTemplate(w, "events", data)
 			return
@@ -101,7 +130,8 @@ func SetupRoutes() *http.ServeMux {
 				return
 			}
 			if !data.IsAdmin {
-				http.Error(w, "Unauthorized", http.StatusForbidden)
+				data.PageTitle = "Unauthorized | Exun 2025"
+				templates.RenderTemplate(w, "404", data)
 				return
 			}
 			data.PageTitle = "Admin Panel | Exun 2025"
@@ -223,7 +253,9 @@ func SetupRoutes() *http.ServeMux {
 				}
 			}
 		}
-		http.NotFound(w, r)
+		data := getTemplateData(r)
+		data.PageTitle = "Page not found | Exun 2025"
+		templates.RenderTemplate(w, "404", data)
 	})
 
 	mux.HandleFunc("/api/health", handlers.HealthCheck)
