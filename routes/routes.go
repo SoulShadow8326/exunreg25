@@ -171,7 +171,7 @@ func SetupRoutes() *http.ServeMux {
 								user.Email = v
 							}
 							if v, ok := ui["fullname"].(string); ok {
-								user.FullName = v
+								user.Fullname = v
 							}
 							if v, ok := ui["phone"].(string); ok {
 								user.PhoneNumber = v
@@ -326,6 +326,9 @@ func SetupRoutes() *http.ServeMux {
 
 	adminExportHandler := http.HandlerFunc(handlers.ExportData)
 	mux.Handle("/api/admin/export", middleware.AuthRequired(adminExportHandler))
+
+	adminSendInviteHandler := http.HandlerFunc(handlers.SendInvite)
+	mux.Handle("/api/admin/send-invite", middleware.AuthRequired(adminSendInviteHandler))
 
 	return mux
 }

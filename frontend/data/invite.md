@@ -1,7 +1,7 @@
 # **Invite**
 
 You can always return to this page to have a quick recap on the event, and how it works.\
-If your school did not get an official email yet, please submit your school's email to exun\@dpsrkp.net along with the school name for the Official Invitation for the Exun 2024.
+If your school did not get an official email yet, please submit your school's email to exun\@dpsrkp.net along with the school name for the Official Invitation for the Exun 2025.
 
 
 ## **Exun Clan**
@@ -11,11 +11,11 @@ Founded in 1991, Exun Clan is the Computer Science and technology club of Delhi 
 For the past couple of decades, we have set the bar for technology competitions in India with new and exciting additions each year and then surpassed it ourselves, striving to continuously improve the symposium, club and ourselves. Examples include Exun Talks, our Girls in Tech initiative, and novel event concepts.
 
 
-## **Introduction to the Exun 2024 Symposium**
+## **Introduction to the Exun 2025 Symposium**
 
-Exun 2024 is our 29th annual international technology symposium hosted by high school students, which will be held during Exun Week during November 2nd-10th 2024. Preliminary/Online rounds for some events will be held between 2nd November and 6th November. Every year, STEM enthusiasts from India and beyond arrive at our symposium, both battling it out and coming together to have some of the most memorable and impactful experiences of their lives, deeply engaging with and celebrating the essence of technology on the way.
+Exun 2025 is our 29th annual international technology symposium hosted by high school students, which will be held during Exun Week during November 2nd-10th 2025. Preliminary/Online rounds for some events will be held between 2nd November and 6th November. Every year, STEM enthusiasts from India and beyond arrive at our symposium, both battling it out and coming together to have some of the most memorable and impactful experiences of their lives, deeply engaging with and celebrating the essence of technology on the way.
 
-So, who should participate in Exun 2024? If you are someone, or know someone, who enjoys problem solving, loves expressing themselves digitally, has an interest in science and technology or simply wants to learn and explore, we can guarantee you’ll find plenty of quality opportunities, all in one place. Are you excited yet? We hope you are and we will gladly be looking forward to having you at our symposium! But wait, there is more you should know!
+So, who should participate in Exun 2025? If you are someone, or know someone, who enjoys problem solving, loves expressing themselves digitally, has an interest in science and technology or simply wants to learn and explore, we can guarantee you’ll find plenty of quality opportunities, all in one place. Are you excited yet? We hope you are and we will gladly be looking forward to having you at our symposium! But wait, there is more you should know!
 
 
 ## **Events**
@@ -26,7 +26,7 @@ So, who should participate in Exun 2024? If you are someone, or know someone, wh
 
 - We have also teamed up with four other clubs in our school to offer you a chance to show off your skillset: DomainSquare+, the Gaming society of our school; Roboknights, the robotics club; CubXL, the cubing club and CyberX, the Cybersecurity Club.
 
-- Please check our [**Events**](https://reg.exunclan.com/events) page for details of the full spectrum of events Exun 2024 has to offer. Most events will have preliminary rounds which will be conducted prior to the offline days. (More details can be found at [**exun.co/24/schedule**](https://docs.google.com/document/d/1h_sWUuvQlLoiwf4R7kGO7_VQi-mnqlbGrBu6wyAGEhg/edit?usp=sharing)) while other events will fully happen onsite on November 9-10, so be sure to check that out!
+- Please check our [**Events**](https://reg.exunclan.com/events) page for details of the full spectrum of events Exun 2025 has to offer. Most events will have preliminary rounds which will be conducted prior to the offline days. (More details can be found at [**exun.co/24/schedule**](https://docs.google.com/document/d/1h_sWUuvQlLoiwf4R7kGO7_VQi-mnqlbGrBu6wyAGEhg/edit?usp=sharing)) while other events will fully happen onsite on November 9-10, so be sure to check that out!
 
 
 ## **Prizes & Overall Trophy**
@@ -38,7 +38,7 @@ We have different prizes available for teams (individual or multiple participant
 
 ### **Overall Trophy**
 
-Podium points from each win will contribute towards a school’s overall points tally for Exun 2024 (further details on breakdown are given on our Events page). The school with the most points will win the coveted Exun 2024 Overall, and be awarded our specially-designed Exun 2024 Overall Trophy!
+Podium points from each win will contribute towards a school’s overall points tally for Exun 2025 (further details on breakdown are given on our Events page). The school with the most points will win the coveted Exun 2025 Overall, and be awarded our specially-designed Exun 2025 Overall Trophy!
 
 
 ## **Sudocrypt v14.0**
@@ -50,13 +50,13 @@ However, first, what is a "cryptic hunt"? To put it simply: Cryptic hunts are th
 
 ## **Dates:**
 
-Be sure to mark your calendars for Exun 2024!
+Be sure to mark your calendars for Exun 2025!
 
 |                                   |                                    |               |
 | --------------------------------- | ---------------------------------- | ------------- |
-| Last date for Online registration | 6th November 2024\*                |               |
-| Online Events and Prelims         | 27th October to 6th November, 2024 |               |
-| Onsite Events                     | 9th and 10th November, 2024        |               |
+| Last date for Online registration | 6th November 2025\*                |               |
+| Online Events and Prelims         | 27th October to 6th November, 2025 |               |
+| Onsite Events                     | 9th and 10th November, 2025        |               |
 |                                   | 9th November                       | 10th November |
 | Onsite Events Timings             | 9AM - 4PM                          | 8AM - 3PM     |
 | Onsite Events Reporting Time      | 8:30AM                             | 7:30AM        |
@@ -100,11 +100,11 @@ You are welcome to mail us any time at <exun@dpsrkp.net>
 
 ## **General Instructions**
 
-- **Plagiarism is strictly prohibited for all events** under Exun 2024 and may lead to disqualification from the specific event.
+- **Plagiarism is strictly prohibited for all events** under Exun 2025 and may lead to disqualification from the specific event.
 
 - Schools/Individuals must register for all events they want to participate in, late registration for an event will not be allowed in any circumstance.
 
-- Participants must follow the [**Exun 2024 Event Code**](https://exun.co/code), and behave with appropriate conduct in all situations.
+- Participants must follow the [**Exun 2025 Event Code**](https://exun.co/code), and behave with appropriate conduct in all situations.
 
 - No participant may be part of multiple teams for a single event.
 
@@ -115,7 +115,7 @@ You are welcome to mail us any time at <exun@dpsrkp.net>
 
 ## **Registration Rules**
 
-- Online registration shall remain open till 6nd November 2024, 11:59PM IST for events without preliminary rounds, and close 12 hours before the preliminary rounds end for events which have one.
+- Online registration shall remain open till 6nd November 2025, 11:59PM IST for events without preliminary rounds, and close 12 hours before the preliminary rounds end for events which have one.
 
 - The preliminary rounds’ deadline will differ so be sure to check respective deadlines at [**exun.co/24/schedule**](https://docs.google.com/document/d/1h_sWUuvQlLoiwf4R7kGO7_VQi-mnqlbGrBu6wyAGEhg/edit?usp=sharing)**.** Teams will not be allowed to edit their participants’ names after the preliminary round under any circumstances.
 
@@ -123,13 +123,13 @@ You are welcome to mail us any time at <exun@dpsrkp.net>
 
 - Note: School registration is open for both Indian schools and International schools. Participants can register independently as well, as outlined below.
 
-- Independent Registration: Students can register independently on the same website. Make sure to check independent registration while signing up. Independent participants can form teams among themselves, with students from the same or different schools/regions. Independent participants will compete for prizes in the same way as school teams, however they will not be eligible for the Exun 2024 overall winners trophy.
+- Independent Registration: Students can register independently on the same website. Make sure to check independent registration while signing up. Independent participants can form teams among themselves, with students from the same or different schools/regions. Independent participants will compete for prizes in the same way as school teams, however they will not be eligible for the Exun 2025 overall winners trophy.
 
 - Please note that not all events allow independent registration. Kindly check the Event Details for further information.
 
 - Note: Identification proof of all students(for independent) will be required to complete the registration form.
 
-- There is no registration fee associated with registering for Exun 2024.
+- There is no registration fee associated with registering for Exun 2025.
 
 - Any changes in the invite will be marked with \*\*.
 
@@ -145,7 +145,7 @@ You are welcome to mail us any time at <exun@dpsrkp.net>
 
 ## **Prizes & Overall Trophy Rules**
 
-- The school which accumulates the maximum points, based on the points tally (further details on breakdown are given at the end of the webpage). will bag the prize Exun 2024 Overall Trophy.
+- The school which accumulates the maximum points, based on the points tally (further details on breakdown are given at the end of the webpage). will bag the prize Exun 2025 Overall Trophy.
 
 - Any changes must be specified (mentioned) clearly and verified by the host school teacher incharge
 

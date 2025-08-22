@@ -79,8 +79,11 @@ func main() {
 	}
 
 	emailService := mail.NewEmailService(emailConfig)
+	inviteService := mail.NewInviteEmailService(emailService)
 	authHandler := handlers.NewAuthHandler(database, authConfig, emailService)
 	adminHandler := handlers.NewAdminHandler(database)
+
+	handlers.SetInviteService(inviteService)
 
 	handlers.SetGlobalAuthHandler(authHandler)
 	handlers.SetGlobalAdminHandler(adminHandler)

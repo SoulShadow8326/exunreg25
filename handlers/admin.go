@@ -9,10 +9,19 @@ import (
 	"time"
 
 	"exunreg25/db"
+	"exunreg25/mail"
 )
 
 type AdminHandler struct {
 	db *db.Database
+}
+
+type InvitePayload struct {
+	ToEmail       string `json:"to_email"`
+	SchoolName    string `json:"school_name"`
+	PrincipalName string `json:"principal_name,omitempty"`
+	CustomMessage string `json:"custom_message,omitempty"`
+	SchoolCode    string `json:"school_code,omitempty"`
 }
 
 type EventUpdateRequest struct {
@@ -114,7 +123,7 @@ func (ah *AdminHandler) GetAdminStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, eventData := range events {
-		event := eventData.(db.Event)
+		event := eventData.(*db.Event)
 		eventStats := EventStats{
 			EventName:         event.Name,
 			TotalParticipants: 0,
@@ -124,7 +133,7 @@ func (ah *AdminHandler) GetAdminStats(w http.ResponseWriter, r *http.Request) {
 		}
 
 		for _, userData := range users {
-			user := userData.(db.User)
+			user := userData.(*db.User)
 			if participants, exists := user.Registrations[event.ID]; exists {
 				eventStats.TotalParticipants += len(participants)
 				eventStats.TotalTeams++
@@ -179,7 +188,7 @@ func (ah *AdminHandler) GetEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	event := eventData.(db.Event)
+	event := eventData.(*db.Event)
 	response := map[string]interface{}{
 		"id":                       event.ID,
 		"mode":                     event.Mode,
@@ -222,7 +231,7 @@ func (ah *AdminHandler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existingEvent := existingEventData.(db.Event)
+	existingEvent := existingEventData.(*db.Event)
 	eligibilityStr := fmt.Sprintf("[%d,%d]", req.MinClass, req.MaxClass)
 
 	updatedEvent := db.Event{
@@ -312,6 +321,82 @@ func (ah *AdminHandler) GetUserDetails(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(userData)
+}
+
+func (ah *AdminHandler) SendInvite(w http.ResponseWriter, r *http.Request) {
+	if !globalAuthHandler.isAuthenticated(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	email := globalAuthHandler.getAuthenticatedUser(r)
+	if !IsAdminEmail(email) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req InvitePayload
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.ToEmail != "" {
+		u := db.User{
+			Email:           req.ToEmail,
+			InstitutionName: req.SchoolName,
+			Fullname:        "",
+			SchoolCode:      req.SchoolCode,
+			CreatedAt:       time.Now(),
+			UpdatedAt:       time.Now(),
+		}
+		if err := ah.db.Create("users", &u); err != nil {
+			if existing, err2 := ah.db.Get("users", req.ToEmail); err2 == nil {
+				eu := existing.(db.User)
+				if eu.SchoolCode == "" {
+					eu.SchoolCode = req.SchoolCode
+					eu.InstitutionName = req.SchoolName
+					eu.UpdatedAt = time.Now()
+					_ = ah.db.Update("users", req.ToEmail, eu)
+				}
+			}
+		}
+	}
+
+	inviteReq := struct {
+		ToEmail       string
+		SchoolName    string
+		PrincipalName string
+		CustomMessage string
+		SchoolCode    string
+	}{
+		ToEmail:       req.ToEmail,
+		SchoolName:    req.SchoolName,
+		PrincipalName: req.PrincipalName,
+		CustomMessage: req.CustomMessage,
+		SchoolCode:    req.SchoolCode,
+	}
+
+	if inviteService != nil {
+		mreq := mail.InviteEmailRequest{
+			ToEmail:       inviteReq.ToEmail,
+			SchoolName:    inviteReq.SchoolName,
+			PrincipalName: inviteReq.PrincipalName,
+			CustomMessage: inviteReq.CustomMessage,
+			SchoolCode:    inviteReq.SchoolCode,
+		}
+		if err := inviteService.SendInviteEmail(mreq); err != nil {
+			http.Error(w, "Failed to send invite", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"success": true})
 }
 
 func (ah *AdminHandler) GetEventRegistrations(w http.ResponseWriter, r *http.Request) {
@@ -412,6 +497,11 @@ func (ah *AdminHandler) ExportData(w http.ResponseWriter, r *http.Request) {
 }
 
 var globalAdminHandler *AdminHandler
+var inviteService *mail.InviteEmailService
+
+func SetInviteService(svc *mail.InviteEmailService) {
+	inviteService = svc
+}
 
 func SetGlobalAdminHandler(handler *AdminHandler) {
 	globalAdminHandler = handler
@@ -521,4 +611,12 @@ func GetAdminConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	globalAdminHandler.GetAdminConfig(w, r)
+}
+
+func SendInvite(w http.ResponseWriter, r *http.Request) {
+	if globalAdminHandler == nil {
+		http.Error(w, "Admin handler not initialized", http.StatusInternalServerError)
+		return
+	}
+	globalAdminHandler.SendInvite(w, r)
 }

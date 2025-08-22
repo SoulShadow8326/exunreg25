@@ -18,6 +18,7 @@ type InviteEmailRequest struct {
 	SchoolName    string `json:"school_name"`
 	PrincipalName string `json:"principal_name"`
 	CustomMessage string `json:"custom_message,omitempty"`
+	SchoolCode    string `json:"school_code,omitempty"`
 }
 
 func NewInviteEmailService(emailService *EmailService) *InviteEmailService {
@@ -73,12 +74,14 @@ func (ies *InviteEmailService) generateInviteEmail(req InviteEmailRequest) (stri
 		SchoolName    string
 		PrincipalName string
 		CustomMessage string
+		SchoolCode    string
 		CurrentYear   int
 		CurrentDate   string
 	}{
 		SchoolName:    req.SchoolName,
 		PrincipalName: req.PrincipalName,
 		CustomMessage: req.CustomMessage,
+		SchoolCode:    req.SchoolCode,
 		CurrentYear:   time.Now().Year(),
 		CurrentDate:   time.Now().Format("January 2, 2006"),
 	}
@@ -91,7 +94,7 @@ func (ies *InviteEmailService) generateInviteEmail(req InviteEmailRequest) (stri
 }
 
 func (ies *InviteEmailService) SendReminderEmail(email, schoolName string) error {
-	subject := "Reminder: Exun 2024 Registration Deadline Approaching"
+	subject := "Reminder: Exun 2025 Registration Deadline Approaching"
 
 	htmlContent, err := ies.generateReminderEmail(schoolName)
 	if err != nil {
@@ -130,7 +133,7 @@ func (ies *InviteEmailService) generateReminderEmail(schoolName string) (string,
 }
 
 func (ies *InviteEmailService) SendWelcomeEmail(email, schoolName string) error {
-	subject := "Welcome to Exun 2024 - Registration Confirmed"
+	subject := "Welcome to Exun 2025 - Registration Confirmed"
 
 	htmlContent, err := ies.generateWelcomeEmail(schoolName)
 	if err != nil {

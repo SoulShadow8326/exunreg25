@@ -96,6 +96,7 @@ class LoginPage {
         const formData = new FormData(e.target);
         const email = formData.get('email');
         const password = formData.get('password');
+    const schoolCode = formData.get('school_code');
         
         if (!this.validateEmail(email)) {
             this.showFieldError('email', 'Please enter a valid email address');
@@ -109,7 +110,11 @@ class LoginPage {
             if (this.authMode === 'login') {
                 await this.handleLogin(email, password);
             } else {
-                await this.handleRegister(email);
+                if (!schoolCode || String(schoolCode).trim() === '') {
+                    this.showFieldError('school_code', 'School code is required for signup');
+                    return;
+                }
+                await this.handleRegister(email, String(schoolCode).trim());
             }
         } catch (error) {
             console.error('Auth error:', error);
@@ -144,13 +149,12 @@ class LoginPage {
         }
     }
 
-    async handleRegister(email) {
+    async handleRegister(email, schoolCode) {
         this.currentEmail = email;
-        
         try {
             const response = await ExunServices.api.apiRequest('/auth/send-otp', {
                 method: 'POST',
-                body: JSON.stringify({ email })
+                body: JSON.stringify({ email, school_code: schoolCode })
             });
             
             if (response.status === 'success') {
@@ -285,6 +289,7 @@ class LoginPage {
             if (switchText) switchText.textContent = "Don't have an account? ";
             if (switchLink) switchLink.textContent = 'Register here';
             if (passwordGroup) passwordGroup.style.display = 'flex';
+            const sc = document.getElementById('school-code-group'); if (sc) sc.style.display = 'none';
         } else {
             if (title) title.textContent = 'Join Exun 2025';
             if (subtitle) subtitle.textContent = 'Create your account to register for events';
@@ -292,6 +297,7 @@ class LoginPage {
             if (switchText) switchText.textContent = 'Already have an account? ';
             if (switchLink) switchLink.textContent = 'Sign in here';
             if (passwordGroup) passwordGroup.style.display = 'none';
+            const sc = document.getElementById('school-code-group'); if (sc) sc.style.display = 'block';
         }
     }
 

@@ -22,6 +22,7 @@ type TemplateData struct {
 	Events          []Event
 	Categories      []Category
 	Stats           *AdminStats
+	Summary         *Summary
 	PageTitle       string
 	CurrentPath     string
 }
@@ -33,13 +34,26 @@ type Category struct {
 
 type User struct {
 	Email           string `json:"email"`
-	FullName        string `json:"fullname"`
+	Fullname        string `json:"fullname"`
 	PhoneNumber     string `json:"phone_number"`
 	PrincipalsEmail string `json:"principals_email"`
 	InstitutionName string `json:"institution_name"`
 	Address         string `json:"address"`
 	PrincipalsName  string `json:"principals_name"`
 	Individual      string `json:"individual"`
+	Registrations   map[string][]Participant
+}
+
+type Participant struct {
+	Name  string `json:"name"`
+	Class int    `json:"class"`
+}
+
+type Summary struct {
+	TotalRegistrations     int `json:"total_registrations"`
+	ConfirmedRegistrations int `json:"confirmed_registrations"`
+	PendingRegistrations   int `json:"pending_registrations"`
+	TeamEvents             int `json:"team_events"`
 }
 
 type Event struct {
@@ -60,15 +74,18 @@ type Event struct {
 }
 
 type AdminStats struct {
-	TotalUsers         int                  `json:"total_users"`
-	TotalEvents        int                  `json:"total_events"`
-	TotalRegistrations int                  `json:"total_registrations"`
-	EventStats         map[string]EventStat `json:"event_stats"`
+	TotalUsers         int                   `json:"total_users"`
+	TotalEvents        int                   `json:"total_events"`
+	TotalRegistrations int                   `json:"total_registrations"`
+	EventStats         map[string]EventStats `json:"event_stats"`
 }
 
-type EventStat struct {
-	Name         string `json:"name"`
-	Participants int    `json:"participants"`
+type EventStats struct {
+	EventName         string `json:"event_name"`
+	TotalParticipants int    `json:"total_participants"`
+	TotalTeams        int    `json:"total_teams"`
+	Mode              string `json:"mode"`
+	Eligibility       string `json:"eligibility"`
 }
 
 func InitTemplates() error {

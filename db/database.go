@@ -29,6 +29,7 @@ type User struct {
 	Fullname        string                   `json:"fullname"`
 	PhoneNumber     string                   `json:"phone_number"`
 	PrincipalsEmail string                   `json:"principals_email"`
+	SchoolCode      string                   `json:"school_code"`
 	Individual      string                   `json:"individual"`
 	InstitutionName string                   `json:"institution_name"`
 	Address         string                   `json:"address"`
@@ -134,6 +135,7 @@ func (db *Database) InitTables() error {
 		username TEXT UNIQUE NOT NULL,
 		email TEXT UNIQUE NOT NULL,
 		password_hash TEXT NOT NULL,
+		school_code TEXT,
 		fullname TEXT,
 		phone_number TEXT,
 		principals_email TEXT,
@@ -206,11 +208,11 @@ func (db *Database) InitTables() error {
 func (db *Database) Get(entity string, key string) (interface{}, error) {
 	switch entity {
 	case "users":
-		query := `SELECT id, username, email, password_hash, fullname, phone_number, principals_email, individual, institution_name, address, principals_name, registrations, created_at, updated_at FROM users WHERE email = ?`
+		query := `SELECT id, username, email, password_hash, school_code, fullname, phone_number, principals_email, individual, institution_name, address, principals_name, registrations, created_at, updated_at FROM users WHERE email = ?`
 		user := &User{}
 		var registrationsStr string
 		err := db.QueryRow(query, key).Scan(
-			&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.Fullname, &user.PhoneNumber, &user.PrincipalsEmail, &user.Individual, &user.InstitutionName, &user.Address, &user.PrincipalsName, &registrationsStr, &user.CreatedAt, &user.UpdatedAt)
+			&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.SchoolCode, &user.Fullname, &user.PhoneNumber, &user.PrincipalsEmail, &user.Individual, &user.InstitutionName, &user.Address, &user.PrincipalsName, &registrationsStr, &user.CreatedAt, &user.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -255,8 +257,8 @@ func (db *Database) Create(entity string, data interface{}) error {
 		if !ok {
 			return fmt.Errorf("invalid user data")
 		}
-		query := `INSERT INTO users (username, email, password_hash, fullname, phone_number, principals_email, individual, institution_name, address, principals_name, registrations, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-		_, err := db.Exec(query, user.Username, user.Email, user.PasswordHash, user.Fullname, user.PhoneNumber, user.PrincipalsEmail, user.Individual, user.InstitutionName, user.Address, user.PrincipalsName, user.marshalRegistrations(), now, now)
+		query := `INSERT INTO users (username, email, password_hash, school_code, fullname, phone_number, principals_email, individual, institution_name, address, principals_name, registrations, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		_, err := db.Exec(query, user.Username, user.Email, user.PasswordHash, user.SchoolCode, user.Fullname, user.PhoneNumber, user.PrincipalsEmail, user.Individual, user.InstitutionName, user.Address, user.PrincipalsName, user.marshalRegistrations(), now, now)
 		if err != nil {
 			log.Printf("db.Create(users) error: %v", err)
 		}
@@ -304,8 +306,8 @@ func (db *Database) Update(entity string, key string, data interface{}) error {
 		if !ok {
 			return fmt.Errorf("invalid user data")
 		}
-		query := `UPDATE users SET username = ?, password_hash = ?, fullname = ?, phone_number = ?, principals_email = ?, individual = ?, institution_name = ?, address = ?, principals_name = ?, registrations = ?, updated_at = ? WHERE email = ?`
-		_, err := db.Exec(query, user.Username, user.PasswordHash, user.Fullname, user.PhoneNumber, user.PrincipalsEmail, user.Individual, user.InstitutionName, user.Address, user.PrincipalsName, user.marshalRegistrations(), now, key)
+		query := `UPDATE users SET username = ?, password_hash = ?, school_code = ?, fullname = ?, phone_number = ?, principals_email = ?, individual = ?, institution_name = ?, address = ?, principals_name = ?, registrations = ?, updated_at = ? WHERE email = ?`
+		_, err := db.Exec(query, user.Username, user.PasswordHash, user.SchoolCode, user.Fullname, user.PhoneNumber, user.PrincipalsEmail, user.Individual, user.InstitutionName, user.Address, user.PrincipalsName, user.marshalRegistrations(), now, key)
 		if err != nil {
 			log.Printf("db.Update(users) error: %v", err)
 		}
@@ -369,7 +371,7 @@ func (db *Database) Delete(entity string, key string) error {
 func (db *Database) GetAll(entity string) ([]interface{}, error) {
 	switch entity {
 	case "users":
-		query := `SELECT id, username, email, password_hash, fullname, phone_number, principals_email, individual, institution_name, address, principals_name, registrations, created_at, updated_at FROM users`
+		query := `SELECT id, username, email, password_hash, school_code, fullname, phone_number, principals_email, individual, institution_name, address, principals_name, registrations, created_at, updated_at FROM users`
 		rows, err := db.Query(query)
 		if err != nil {
 			return nil, err
@@ -380,7 +382,7 @@ func (db *Database) GetAll(entity string) ([]interface{}, error) {
 		for rows.Next() {
 			user := &User{}
 			var registrationsStr string
-			err := rows.Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.Fullname, &user.PhoneNumber, &user.PrincipalsEmail, &user.Individual, &user.InstitutionName, &user.Address, &user.PrincipalsName, &registrationsStr, &user.CreatedAt, &user.UpdatedAt)
+			err := rows.Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.SchoolCode, &user.Fullname, &user.PhoneNumber, &user.PrincipalsEmail, &user.Individual, &user.InstitutionName, &user.Address, &user.PrincipalsName, &registrationsStr, &user.CreatedAt, &user.UpdatedAt)
 			if err != nil {
 				return nil, err
 			}

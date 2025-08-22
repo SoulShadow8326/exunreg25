@@ -25,6 +25,9 @@
                             <p
                                 style="font-size: 0.875rem; line-height: 1.25rem; text-align: center; color: #000; margin: 0.25rem;">
                                 Enter this 6-digit one-time verification code in the signup page.</p>
+                            {{if .SchoolCode}}
+                            <p style="font-size:0.875rem; color:#434343; margin:0.25rem;">School Code: <strong>{{.SchoolCode}}</strong></p>
+                            {{end}}
                         </td>
                     </tr>
                     <tr>

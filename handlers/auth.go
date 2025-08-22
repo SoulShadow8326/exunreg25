@@ -22,7 +22,8 @@ type AuthToken struct {
 	ExpiresAt time.Time `json:"expires_at"`
 }
 type OTPRequest struct {
-	Email string `json:"email"`
+	Email      string `json:"email"`
+	SchoolCode string `json:"school_code,omitempty"`
 }
 type OTPResponse struct {
 	Email string `json:"email"`
@@ -38,7 +39,7 @@ type AuthHandler struct {
 	mailSender MailSender
 }
 type MailSender interface {
-	SendOTP(to, otp string) error
+	SendOTP(to, otp, schoolCode string) error
 }
 
 func NewAuthHandler(db *db.Database, config *AuthConfig, mailSender MailSender) *AuthHandler {
@@ -123,7 +124,7 @@ func (ah *AuthHandler) SendOTP(w http.ResponseWriter, r *http.Request) {
 	}
 	otp := ah.generateOTP(req.Email)
 
-	if err := ah.mailSender.SendOTP(req.Email, otp); err != nil {
+	if err := ah.mailSender.SendOTP(req.Email, otp, req.SchoolCode); err != nil {
 		fmt.Printf("SendOTP error: %v\n", err)
 		response := Response{
 			Status: "error",
@@ -133,6 +134,24 @@ func (ah *AuthHandler) SendOTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
 		return
+	}
+
+	if u, gerr := ah.db.Get("users", req.Email); gerr != nil {
+		placeholder := &db.User{
+			Username:      req.Email,
+			Email:         req.Email,
+			PasswordHash:  "",
+			SchoolCode:    req.SchoolCode,
+			Registrations: make(map[string][]db.Participant),
+			CreatedAt:     time.Now(),
+			UpdatedAt:     time.Now(),
+		}
+		_ = ah.db.Create("users", placeholder)
+	} else if existing, ok := u.(*db.User); ok {
+		if existing.SchoolCode == "" && req.SchoolCode != "" {
+			existing.SchoolCode = req.SchoolCode
+			_ = ah.db.Update("users", req.Email, existing)
+		}
 	}
 	response := Response{
 		Status:  "success",

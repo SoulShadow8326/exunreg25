@@ -21,7 +21,7 @@ type EmailConfig struct {
 }
 
 type MailSender interface {
-	SendOTP(to, otp string) error
+	SendOTP(to, otp, schoolCode string) error
 }
 
 type EmailService struct {
@@ -32,10 +32,10 @@ func NewEmailService(config *EmailConfig) *EmailService {
 	return &EmailService{config: *config}
 }
 
-func (es *EmailService) SendOTP(to, otp string) error {
+func (es *EmailService) SendOTP(to, otp, schoolCode string) error {
 	subject := fmt.Sprintf("Exun Registration Authentication OTP - %s", otp)
 
-	htmlBody, err := es.renderOTPTemplate(otp)
+	htmlBody, err := es.renderOTPTemplate(otp, schoolCode)
 	if err != nil {
 		return fmt.Errorf("failed to render email template: %v", err)
 	}
@@ -47,7 +47,7 @@ func (es *EmailService) SendEmail(to, subject, htmlBody string) error {
 	return es.sendEmail(to, subject, htmlBody)
 }
 
-func (es *EmailService) renderOTPTemplate(otp string) (string, error) {
+func (es *EmailService) renderOTPTemplate(otp string, schoolCode string) (string, error) {
 	templatePath := filepath.Join("mail", "otp.html")
 
 	templateContent, err := os.ReadFile(templatePath)
@@ -61,9 +61,10 @@ func (es *EmailService) renderOTPTemplate(otp string) (string, error) {
 	}
 
 	data := struct {
-		OTP       string
-		OTPDigits []string
-	}{OTP: otp, OTPDigits: strings.Split(otp, "")}
+		OTP        string
+		OTPDigits  []string
+		SchoolCode string
+	}{OTP: otp, OTPDigits: strings.Split(otp, ""), SchoolCode: schoolCode}
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, data); err != nil {
