@@ -34,7 +34,6 @@ class Navigation {
 
     updateNavigation() {
         this.updateAuthLinks();
-        this.updateAdminLinks();
         this.updateActiveLink();
     }
 
@@ -55,16 +54,6 @@ class Navigation {
     }
 
     updateAdminLinks() {
-        const adminContainer = document.querySelector('[data-nav="admin"]');
-        if (!adminContainer) return;
-
-        if (this.currentUser && ExunServices.api.isAdmin()) {
-            adminContainer.innerHTML = `
-                <a href="/admin" class="navbar__link">Admin</a>
-            `;
-        } else {
-            adminContainer.innerHTML = '';
-        }
     }
 
     updateActiveLink() {

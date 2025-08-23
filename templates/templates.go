@@ -40,7 +40,7 @@ type User struct {
 	InstitutionName string `json:"institution_name"`
 	Address         string `json:"address"`
 	PrincipalsName  string `json:"principals_name"`
-	Individual      string `json:"individual"`
+	Individual      bool   `json:"individual"`
 	Registrations   map[string][]Participant
 }
 

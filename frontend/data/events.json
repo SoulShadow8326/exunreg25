@@ -20,7 +20,8 @@
         "CubXL Pyraminx":"pyraminx.svg",
         "CubXL Surprise":"cubxl_surp.svg",
         "Roboknights: Robosoccer":"robotics.svg",
-        "Roboknights: Mx+C V5.0 Line Following Robot":"robotics.svg"
+        "Roboknights: Mx+C V5.0 Line Following Robot":"robotics.svg",
+        "Surprise":"open_quiz.svg"
     },
     "default": {
         "open_to_all":false,
@@ -119,8 +120,11 @@
         "Roboknights: Mx+C V5.0 Line Following Robot": {
             "long":"Teams will build their own autonomous robots to achieve maximum speed on a specified track. The robot must start behind the starting line and is considered to finish when any part crosses the line after a full lap, while following the black line.\n\nRobot Specifications:\nSize - 25 cm x 25 cm x 20 cm with 5% tolerance\nWeight - 2 kg with 5% tolerance\n\nPower Source - Batteries must be sealed, immobilized electrolyte type (gel cell, lithium, NiCad, or dry cells), at any point it should not cross 12 V.\n\nThe Robot must follow a black line of 25 mm width on a white surface. It should also be able to handle acute angled turns, switchbacks, hairpins, line gaps and intersections.\n\nThe robot must be autonomous. No wireless communication between bot and operator will be allowed. Bluetooth, RF Module, etc are not allowed on both.\n\nReady-made robots and kits are not allowed to compete in the competition",
             "short":"Teams build autonomous robots for a high-speed line-following race on a specified track. Robots must handle acute turns and intersections while following a black line, with strict size and weight constraints."
+        },
+        "Surprise":{
+            "long":"Surprise!",
+            "short":"Surprise!"
         }
-
     },
     "participants":{
         "Build: Hackathon": 4,
@@ -143,7 +147,8 @@
         "CubXL Pyraminx": 1,
         "CubXL Surprise": 1,
         "Roboknights: Robosoccer": 3,
-        "Roboknights: Mx+C V5.0 Line Following Robot": 3
+        "Roboknights: Mx+C V5.0 Line Following Robot": 3,
+        "Surprise":2
     },
     "mode":
     {
@@ -167,7 +172,8 @@
         "CubXL Pyraminx": "Hybrid",
         "CubXL Surprise": "Offline",
         "Roboknights: Robosoccer": "Offline",
-        "Roboknights: Mx+C V5.0 Line Following Robot": "Offline"
+        "Roboknights: Mx+C V5.0 Line Following Robot": "Offline",
+        "Surprise": "Hybrid"
     },
     "points": {
         "Build: Hackathon": 30,
@@ -190,7 +196,8 @@
         "CubXL Pyraminx": 10,
         "CubXL Surprise": 10,
         "Roboknights: Robosoccer": 30,
-        "Roboknights: Mx+C V5.0 Line Following Robot": 20
+        "Roboknights: Mx+C V5.0 Line Following Robot": 20,
+        "Surprise": 20
     },
     "individual" : {
         "Build: Hackathon": false,
@@ -213,7 +220,8 @@
         "CubXL Pyraminx": false,
         "CubXL Surprise": false,
         "Roboknights: Robosoccer": false,
-        "Roboknights: Mx+C V5.0 Line Following Robot": false
+        "Roboknights: Mx+C V5.0 Line Following Robot": false,
+        "Surprise": false
     },
     "eligibility" : {
         "Build: Hackathon": [6, 12],
@@ -236,7 +244,8 @@
         "CubXL Pyraminx": [6, 12],
         "CubXL Surprise": [6, 12],
         "Roboknights: Robosoccer": [9, 12],
-        "Roboknights: Mx+C V5.0 Line Following Robot": [9, 12]
+        "Roboknights: Mx+C V5.0 Line Following Robot": [9, 12],
+        "Surprise": [9,12]
     },
     "open_to_all" : {
         "Build: Hackathon": false,
@@ -259,6 +268,7 @@
         "CubXL Pyraminx": false,
         "CubXL Surprise": false,
         "Roboknights: Robosoccer": false,
-        "Roboknights: Mx+C V5.0 Line Following Robot": false
+        "Roboknights: Mx+C V5.0 Line Following Robot": false,
+        "Surprise": false
     }
 }

@@ -13,7 +13,7 @@ type CompleteSignupRequest struct {
 	Fullname        string `json:"fullname"`
 	PhoneNumber     string `json:"phone_number"`
 	PrincipalsEmail string `json:"principals_email"`
-	Individual      string `json:"individual"`
+	Individual      *bool  `json:"individual"`
 	InstitutionName string `json:"institution_name"`
 	Address         string `json:"address"`
 	PrincipalsName  string `json:"principals_name"`
@@ -26,7 +26,8 @@ type UserProfile struct {
 	Fullname        string                 `json:"fullname"`
 	PhoneNumber     string                 `json:"phone_number"`
 	PrincipalsEmail string                 `json:"principals_email"`
-	Individual      string                 `json:"individual"`
+	SchoolCode      string                 `json:"school_code"`
+	Individual      bool                   `json:"individual"`
 	InstitutionName string                 `json:"institution_name"`
 	Address         string                 `json:"address"`
 	PrincipalsName  string                 `json:"principals_name"`
@@ -81,7 +82,7 @@ func CompleteSignupPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := userData.(*db.User)
-	if user.Username != "" {
+	if isProfileComplete(user) {
 		response := Response{
 			Status: "error",
 			Error:  "Signup already completed",
@@ -150,7 +151,7 @@ func CompleteSignupAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := userData.(*db.User)
-	if user.Username != "" {
+	if isProfileComplete(user) {
 		response := Response{
 			Status: "error",
 			Error:  "Signup already completed",
@@ -187,7 +188,11 @@ func CompleteSignupAPI(w http.ResponseWriter, r *http.Request) {
 	user.Fullname = strings.TrimSpace(strings.ToUpper(req.Fullname))
 	user.PhoneNumber = strings.TrimSpace(req.PhoneNumber)
 	user.PrincipalsEmail = strings.TrimSpace(req.PrincipalsEmail)
-	user.Individual = strings.TrimSpace(req.Individual)
+	if req.Individual != nil && *req.Individual {
+		user.Individual = true
+	} else {
+		user.Individual = false
+	}
 	user.InstitutionName = strings.TrimSpace(strings.ToUpper(req.InstitutionName))
 	user.Address = strings.TrimSpace(strings.ToUpper(req.Address))
 	user.PrincipalsName = strings.TrimSpace(strings.ToUpper(req.PrincipalsName))
@@ -269,6 +274,7 @@ func GetUserProfileData(w http.ResponseWriter, r *http.Request) {
 		Fullname:        user.Fullname,
 		PhoneNumber:     user.PhoneNumber,
 		PrincipalsEmail: user.PrincipalsEmail,
+		SchoolCode:      user.SchoolCode,
 		Individual:      user.Individual,
 		InstitutionName: user.InstitutionName,
 		Address:         user.Address,
@@ -368,10 +374,7 @@ func validateCompleteSignupRequest(req CompleteSignupRequest) error {
 	if strings.TrimSpace(req.PhoneNumber) == "" {
 		return fmt.Errorf("phone number is required")
 	}
-	if strings.TrimSpace(req.PrincipalsEmail) == "" {
-		return fmt.Errorf("principal's email is required")
-	}
-	if strings.TrimSpace(req.Individual) == "" {
+	if req.Individual == nil {
 		return fmt.Errorf("individual field is required")
 	}
 	if strings.TrimSpace(req.InstitutionName) == "" {
@@ -388,8 +391,13 @@ func validateCompleteSignupRequest(req CompleteSignupRequest) error {
 		return fmt.Errorf("phone number must be 10 digits")
 	}
 
-	if !validateEmailFormat(req.PrincipalsEmail) {
-		return fmt.Errorf("invalid principal's email format")
+	if req.Individual != nil && !*req.Individual {
+		if strings.TrimSpace(req.PrincipalsEmail) == "" {
+			return fmt.Errorf("principal's email is required for team registrations")
+		}
+		if !validateEmailFormat(req.PrincipalsEmail) {
+			return fmt.Errorf("invalid principal's email format")
+		}
 	}
 
 	return nil
@@ -422,4 +430,20 @@ func getUserRegistrations(userID int) (map[string]interface{}, error) {
 	}
 
 	return userRegistrations, nil
+}
+
+func isProfileComplete(user *db.User) bool {
+	if user == nil {
+		return false
+	}
+	if strings.TrimSpace(user.Fullname) == "" {
+		return false
+	}
+	if strings.TrimSpace(user.PhoneNumber) == "" {
+		return false
+	}
+	if strings.TrimSpace(user.InstitutionName) == "" {
+		return false
+	}
+	return true
 }

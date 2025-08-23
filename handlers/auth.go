@@ -124,7 +124,7 @@ func (ah *AuthHandler) SendOTP(w http.ResponseWriter, r *http.Request) {
 	}
 	otp := ah.generateOTP(req.Email)
 
-	if err := ah.mailSender.SendOTP(req.Email, otp, req.SchoolCode); err != nil {
+	if err := ah.mailSender.SendOTP(req.Email, otp, otp); err != nil {
 		fmt.Printf("SendOTP error: %v\n", err)
 		response := Response{
 			Status: "error",
@@ -141,15 +141,16 @@ func (ah *AuthHandler) SendOTP(w http.ResponseWriter, r *http.Request) {
 			Username:      req.Email,
 			Email:         req.Email,
 			PasswordHash:  "",
-			SchoolCode:    req.SchoolCode,
+			SchoolCode:    otp,
 			Registrations: make(map[string][]db.Participant),
 			CreatedAt:     time.Now(),
 			UpdatedAt:     time.Now(),
 		}
 		_ = ah.db.Create("users", placeholder)
 	} else if existing, ok := u.(*db.User); ok {
-		if existing.SchoolCode == "" && req.SchoolCode != "" {
-			existing.SchoolCode = req.SchoolCode
+		if existing.SchoolCode == "" {
+			existing.SchoolCode = otp
+			existing.UpdatedAt = time.Now()
 			_ = ah.db.Update("users", req.Email, existing)
 		}
 	}

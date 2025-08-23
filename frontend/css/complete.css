@@ -14,9 +14,8 @@
 .login-container {
     background: var(--white);
     border-radius: 16px;
-    padding: 40px;
     width: 100%;
-    max-width: 1100px;
+    max-width: 800px !important; 
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
 }
 
@@ -83,26 +82,47 @@
     gap: 8px;
 }
 
-.form-label {
-    font-weight: 600;
-    color: var(--dark-charcoal);
-    font-size: 14px;
-}
+ .form-label {
+     font-weight: 600;
+     color: var(--dark-charcoal);
+     font-size: 0.9375rem; 
+ }
 
 .form-input {
-    padding: 14px 16px;
-    border: 2px solid rgba(56, 58, 60, 0.2);
-    border-radius: 8px;
-    font-size: 16px;
-    transition: all 0.3s ease;
+    padding: 0.625rem 0.75rem; 
+    border: 0.125rem solid rgba(56, 58, 60, 0.12);
+    border-radius: 0.625rem; 
+    font-size: 1rem; 
+    transition: all 0.2s ease;
     background: var(--white);
-    margin-bottom: 8px;
+    margin-bottom: 0.5rem;
 }
 
 .form-input:focus {
     outline: none;
     border-color: var(--exun-blue);
     box-shadow: 0 0 0 3px rgba(41, 119, 245, 0.1);
+}
+
+.checkbox-input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--exun-blue);
+}
+
+.radio-group label, .checkbox-group label {
+    margin-right: 12px;
+    font-weight: 500;
+}
+
+#institution-field, #principal-name-field {
+    transition: opacity 0.2s ease, max-height 0.25s ease;
+}
+
+#institution-field[style*="display: none"], #principal-name-field[style*="display: none"] {
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
 }
 
 .form-input--error {
@@ -188,5 +208,75 @@
     }
     .profile-panel {
         grid-column: 1 / 2;
+    }
+}
+
+body[data-page="complete"] .login-container {
+    max-width: 1200px;
+    padding: 48px 56px;
+}
+
+body[data-page="complete"] .profile-grid {
+    display: flex;
+    gap: 36px;
+    align-items: flex-start;
+}
+
+body[data-page="complete"] .profile-grid > div {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+body[data-page="complete"] .form-group {
+    margin-bottom: 6px;
+}
+
+body[data-page="complete"] label[for="individual"] {
+    display: inline-block;
+    margin-bottom: 0;
+    margin-right: 10px;
+    font-weight: 600;
+}
+
+body[data-page="complete"] input#individual {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 0;
+    transform: scale(1.25);
+    margin-top: 0;
+}
+
+body[data-page="complete"] .form-group > label[for="individual"] + input {
+    margin-top: 0;
+}
+
+body[data-page="complete"] .form-input {
+    width: 22rem; 
+    max-width: 85%;
+    min-width: 0;
+}
+
+body[data-page="complete"] input[type="checkbox"] {
+    transform: scale(1.15);
+    margin-left: 6px;
+    accent-color: var(--exun-blue);
+}
+
+body[data-page="complete"] .login-form .login-btn {
+    width: 100%;
+    padding: 16px 20px;
+    border-radius: 10px;
+}
+
+@media (max-width: 880px) {
+    body[data-page="complete"] .profile-grid {
+        flex-direction: column;
+        gap: 16px;
+    }
+    body[data-page="complete"] .form-input {
+        width: 100%;
+        max-width: 100%;
     }
 }

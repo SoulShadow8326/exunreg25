@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Complete Signup | Exun 2025</title>
+    <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/complete.css">
     <link rel="stylesheet" href="/css/toast.css">
@@ -25,32 +26,40 @@
                                 <div>
                                     <div class="form-group">
                                         <label class="form-label" for="fullname">Full name</label>
-                                        <input class="form-input" id="fullname" name="fullname" type="text" required />
+                                        <input class="form-input" id="fullname" name="fullname" type="text" aria-describedby="err_fullname" />
+                                        <div class="form-error" id="err_fullname" aria-live="polite"></div>
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label" for="phone_number">Phone number</label>
-                                        <input class="form-input" id="phone_number" name="phone_number" type="tel" required />
+                                        <input class="form-input" id="phone_number" name="phone_number" type="tel" aria-describedby="err_phone_number" />
+                                        <div class="form-error" id="err_phone_number" aria-live="polite"></div>
                                     </div>
-                                    <div class="form-group">
+                                    <div class="form-group" id="principal-email-field">
                                         <label class="form-label" for="principals_email">Principal's email</label>
-                                        <input class="form-input" id="principals_email" name="principals_email" type="email" required />
+                                        <input class="form-input" id="principals_email" name="principals_email" type="email" aria-describedby="err_principals_email" />
+                                        <div class="form-error" id="err_principals_email" aria-live="polite"></div>
                                     </div>
                                 </div>
                                 <div>
-                                    <div class="form-group">
-                                        <label class="form-label" for="institution_name">Institution name</label>
-                                        <input class="form-input" id="institution_name" name="institution_name" type="text" />
-                                    </div>
+                    <div class="form-group" id="institution-field">
+                        <label class="form-label" for="institution_name">Institution name</label>
+                        <input class="form-input" id="institution_name" name="institution_name" type="text" />
+                    </div>
+
                                     <div class="form-group">
                                         <label class="form-label" for="address">Address</label>
                                         <input class="form-input" id="address" name="address" type="text" />
                                     </div>
-                                    <div class="form-group">
+                                    <div class="form-group" id="principal-name-field">
                                         <label class="form-label" for="principals_name">Principal's name</label>
                                         <input class="form-input" id="principals_name" name="principals_name" type="text" />
                                     </div>
                                 </div>
                             </div>
+                    <div class="form-group">
+                        <label class="form-label" for="individual">Individual</label>
+                                            <input type="checkbox" id="individual" name="individual" />
+                    </div>
                             <div class="form-group">
                                 <button class="login-btn" type="button" id="save-profile">Save profile</button>
                             </div>
@@ -62,34 +71,85 @@
             </div>
         </main>
 
-    {{template "footer" .}}
 
     <script src="/js/api.js"></script>
     <script src="/js/utils.js"></script>
     <script>
         async function saveProfile() {
+            const individualCheckbox = document.getElementById('individual');
+            ['fullname','phone_number','principals_email'].forEach(id => {
+                const el = document.getElementById('err_' + id);
+                if (el) el.textContent = '';
+            });
+
             const payload = {
                 fullname: document.getElementById('fullname')?.value || '',
                 phone_number: document.getElementById('phone_number')?.value || '',
                 principals_email: document.getElementById('principals_email')?.value || '',
-                individual: (document.getElementById('individual') && document.getElementById('individual').value) || '',
+                individual: individualCheckbox ? individualCheckbox.checked : false,
                 institution_name: document.getElementById('institution_name')?.value || '',
                 address: document.getElementById('address')?.value || '',
                 principals_name: document.getElementById('principals_name')?.value || '',
             };
-                try {
+
+            if (payload.individual === true) {
+                delete payload.principals_email;
+            }
+
+            let clientErr = false;
+            if (!payload.fullname.trim()) {
+                document.getElementById('err_fullname').textContent = 'Full name is required';
+                clientErr = true;
+            }
+            if (!/^[0-9]{10}$/.test(payload.phone_number.trim())) {
+                document.getElementById('err_phone_number').textContent = 'Enter a 10-digit phone number';
+                clientErr = true;
+            }
+            const isInd = payload.individual === true;
+            if (!isInd) {
+                if (!payload.principals_email.trim()) {
+                    document.getElementById('err_principals_email').textContent = "Principal's email is required for teams";
+                    clientErr = true;
+                } else if (!/^\S+@\S+\.\S+$/.test(payload.principals_email.trim())) {
+                    document.getElementById('err_principals_email').textContent = 'Enter a valid email address';
+                    clientErr = true;
+                }
+            }
+
+            if (clientErr) {
+                Utils.showToast('Fix the highlighted errors', 'error');
+                return;
+            }
+            try {
                 const resp = await ExunServices.api.apiRequest('/complete_api', { method: 'POST', body: JSON.stringify(payload) });
                 if (resp.status === 'success') {
-                    Utils.showToast('Profile saved.', 'success');
+                    Utils.showToast('Profile saved. Redirecting to summary...', 'success');
+                    setTimeout(() => window.location.href = '/summary', 700);
                 } else {
-                    Utils.showToast(resp.error || 'Failed to save profile.', 'error');
+                    Utils.showToast(resp.error || resp.message || 'Failed to save profile.', 'error');
                 }
             } catch (err) {
-                document.getElementById('message').textContent = err.message || 'Failed to save profile.';
+                Utils.showToast(err.message || 'Failed to save profile.', 'error');
             }
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
+            const individualCheckbox = document.getElementById('individual');
+            const instField = document.getElementById('institution-field');
+            const princField = document.getElementById('principal-name-field');
+            const princEmailField = document.getElementById('principal-email-field');
+            function toggleFields() {
+                const isInd = individualCheckbox ? individualCheckbox.checked : false;
+                if (instField) instField.style.display = isInd ? 'none' : 'block';
+                if (princField) princField.style.display = isInd ? 'none' : 'block';
+                if (princEmailField) princEmailField.style.display = isInd ? 'none' : 'block';
+                const principalsEmail = document.getElementById('principals_email');
+                if (principalsEmail) principalsEmail.required = !isInd;
+            }
+            if (individualCheckbox) {
+                individualCheckbox.addEventListener('change', toggleFields);
+                toggleFields();
+            }
             document.getElementById('save-profile').addEventListener('click', (e) => {
                 e.preventDefault();
                 saveProfile();

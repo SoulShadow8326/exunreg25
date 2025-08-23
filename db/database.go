@@ -30,7 +30,7 @@ type User struct {
 	PhoneNumber     string                   `json:"phone_number"`
 	PrincipalsEmail string                   `json:"principals_email"`
 	SchoolCode      string                   `json:"school_code"`
-	Individual      string                   `json:"individual"`
+	Individual      bool                     `json:"individual"`
 	InstitutionName string                   `json:"institution_name"`
 	Address         string                   `json:"address"`
 	PrincipalsName  string                   `json:"principals_name"`
@@ -139,7 +139,7 @@ func (db *Database) InitTables() error {
 		fullname TEXT,
 		phone_number TEXT,
 		principals_email TEXT,
-		individual TEXT,
+		individual BOOLEAN DEFAULT FALSE,
 		institution_name TEXT,
 		address TEXT,
 		principals_name TEXT,
@@ -202,6 +202,20 @@ func (db *Database) InitTables() error {
 	}
 
 	log.Println("Database tables initialized successfully")
+
+	migration := `
+UPDATE users SET individual = CASE
+    WHEN lower(individual) IN ('true','1','t','yes') THEN 1
+    ELSE 0
+END
+WHERE typeof(individual) = 'text';`
+
+	if _, err := db.Exec(migration); err != nil {
+		log.Printf("db.InitTables migration error: %v", err)
+	} else {
+		log.Println("db.InitTables: normalized legacy 'individual' values")
+	}
+
 	return nil
 }
 
@@ -211,10 +225,16 @@ func (db *Database) Get(entity string, key string) (interface{}, error) {
 		query := `SELECT id, username, email, password_hash, school_code, fullname, phone_number, principals_email, individual, institution_name, address, principals_name, registrations, created_at, updated_at FROM users WHERE email = ?`
 		user := &User{}
 		var registrationsStr string
+		var individualNull sql.NullBool
 		err := db.QueryRow(query, key).Scan(
-			&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.SchoolCode, &user.Fullname, &user.PhoneNumber, &user.PrincipalsEmail, &user.Individual, &user.InstitutionName, &user.Address, &user.PrincipalsName, &registrationsStr, &user.CreatedAt, &user.UpdatedAt)
+			&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.SchoolCode, &user.Fullname, &user.PhoneNumber, &user.PrincipalsEmail, &individualNull, &user.InstitutionName, &user.Address, &user.PrincipalsName, &registrationsStr, &user.CreatedAt, &user.UpdatedAt)
 		if err != nil {
 			return nil, err
+		}
+		if individualNull.Valid {
+			user.Individual = individualNull.Bool
+		} else {
+			user.Individual = false
 		}
 		user.unmarshalRegistrations(registrationsStr)
 		return user, nil
@@ -258,7 +278,11 @@ func (db *Database) Create(entity string, data interface{}) error {
 			return fmt.Errorf("invalid user data")
 		}
 		query := `INSERT INTO users (username, email, password_hash, school_code, fullname, phone_number, principals_email, individual, institution_name, address, principals_name, registrations, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-		_, err := db.Exec(query, user.Username, user.Email, user.PasswordHash, user.SchoolCode, user.Fullname, user.PhoneNumber, user.PrincipalsEmail, user.Individual, user.InstitutionName, user.Address, user.PrincipalsName, user.marshalRegistrations(), now, now)
+		indiv := 0
+		if user.Individual {
+			indiv = 1
+		}
+		_, err := db.Exec(query, user.Username, user.Email, user.PasswordHash, user.SchoolCode, user.Fullname, user.PhoneNumber, user.PrincipalsEmail, indiv, user.InstitutionName, user.Address, user.PrincipalsName, user.marshalRegistrations(), now, now)
 		if err != nil {
 			log.Printf("db.Create(users) error: %v", err)
 		}
@@ -307,7 +331,11 @@ func (db *Database) Update(entity string, key string, data interface{}) error {
 			return fmt.Errorf("invalid user data")
 		}
 		query := `UPDATE users SET username = ?, password_hash = ?, school_code = ?, fullname = ?, phone_number = ?, principals_email = ?, individual = ?, institution_name = ?, address = ?, principals_name = ?, registrations = ?, updated_at = ? WHERE email = ?`
-		_, err := db.Exec(query, user.Username, user.PasswordHash, user.SchoolCode, user.Fullname, user.PhoneNumber, user.PrincipalsEmail, user.Individual, user.InstitutionName, user.Address, user.PrincipalsName, user.marshalRegistrations(), now, key)
+		indiv := 0
+		if user.Individual {
+			indiv = 1
+		}
+		_, err := db.Exec(query, user.Username, user.PasswordHash, user.SchoolCode, user.Fullname, user.PhoneNumber, user.PrincipalsEmail, indiv, user.InstitutionName, user.Address, user.PrincipalsName, user.marshalRegistrations(), now, key)
 		if err != nil {
 			log.Printf("db.Update(users) error: %v", err)
 		}
@@ -382,9 +410,15 @@ func (db *Database) GetAll(entity string) ([]interface{}, error) {
 		for rows.Next() {
 			user := &User{}
 			var registrationsStr string
-			err := rows.Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.SchoolCode, &user.Fullname, &user.PhoneNumber, &user.PrincipalsEmail, &user.Individual, &user.InstitutionName, &user.Address, &user.PrincipalsName, &registrationsStr, &user.CreatedAt, &user.UpdatedAt)
+			var individualNull sql.NullBool
+			err := rows.Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.SchoolCode, &user.Fullname, &user.PhoneNumber, &user.PrincipalsEmail, &individualNull, &user.InstitutionName, &user.Address, &user.PrincipalsName, &registrationsStr, &user.CreatedAt, &user.UpdatedAt)
 			if err != nil {
 				return nil, err
+			}
+			if individualNull.Valid {
+				user.Individual = individualNull.Bool
+			} else {
+				user.Individual = false
 			}
 			user.unmarshalRegistrations(registrationsStr)
 			users = append(users, user)

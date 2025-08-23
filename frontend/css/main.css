@@ -4,6 +4,9 @@
     font-style: normal;
     font-weight: normal;
 }
+::selection {
+  background: #6FA4FE;
+}
 
 :root {
     --exun-blue: #2977F5;

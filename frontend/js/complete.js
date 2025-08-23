@@ -16,8 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({ username, password })
       });
       if (resp.status === 'success') {
-        message.textContent = 'Signup complete. Redirecting to summary...';
-        setTimeout(() => window.location.href = '/summary', 800);
+        message.textContent = 'Signup complete. Redirecting to profile completion...';
+        setTimeout(() => window.location.href = '/signup', 800);
       } else {
         message.textContent = resp.error || 'Failed to complete signup';
       }

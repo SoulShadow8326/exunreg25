@@ -10,11 +10,7 @@
     <a href="/events" class="navbar__link {{if .IsEvents}}navbar__link--active{{end}}">Events</a>
         <a href="https://docs.google.com/document/d/1h_sWUuvQlLoiwf4R7kGO7_VQi-mnqlbGrBu6wyAGEhg/edit?usp=sharing" class="navbar__link" target="_blank">Schedule</a>
 
-        <div data-nav="admin">
-            {{if .IsAdmin}}
-            <a href="/admin" class="navbar__link">Admin</a>
-            {{end}}
-        </div>
+        
 
         <div data-nav="auth">
             {{if .IsAuthenticated}}

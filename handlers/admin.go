@@ -21,7 +21,6 @@ type InvitePayload struct {
 	SchoolName    string `json:"school_name"`
 	PrincipalName string `json:"principal_name,omitempty"`
 	CustomMessage string `json:"custom_message,omitempty"`
-	SchoolCode    string `json:"school_code,omitempty"`
 }
 
 type EventUpdateRequest struct {
@@ -145,7 +144,7 @@ func (ah *AdminHandler) GetAdminStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, userData := range users {
-		user := userData.(db.User)
+		user := userData.(*db.User)
 		userStats := UserStats{
 			Email:             user.Email,
 			Fullname:          user.Fullname,
@@ -350,15 +349,13 @@ func (ah *AdminHandler) SendInvite(w http.ResponseWriter, r *http.Request) {
 			Email:           req.ToEmail,
 			InstitutionName: req.SchoolName,
 			Fullname:        "",
-			SchoolCode:      req.SchoolCode,
 			CreatedAt:       time.Now(),
 			UpdatedAt:       time.Now(),
 		}
 		if err := ah.db.Create("users", &u); err != nil {
 			if existing, err2 := ah.db.Get("users", req.ToEmail); err2 == nil {
 				eu := existing.(db.User)
-				if eu.SchoolCode == "" {
-					eu.SchoolCode = req.SchoolCode
+				if eu.InstitutionName == "" {
 					eu.InstitutionName = req.SchoolName
 					eu.UpdatedAt = time.Now()
 					_ = ah.db.Update("users", req.ToEmail, eu)
@@ -367,27 +364,12 @@ func (ah *AdminHandler) SendInvite(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	inviteReq := struct {
-		ToEmail       string
-		SchoolName    string
-		PrincipalName string
-		CustomMessage string
-		SchoolCode    string
-	}{
-		ToEmail:       req.ToEmail,
-		SchoolName:    req.SchoolName,
-		PrincipalName: req.PrincipalName,
-		CustomMessage: req.CustomMessage,
-		SchoolCode:    req.SchoolCode,
-	}
-
 	if inviteService != nil {
 		mreq := mail.InviteEmailRequest{
-			ToEmail:       inviteReq.ToEmail,
-			SchoolName:    inviteReq.SchoolName,
-			PrincipalName: inviteReq.PrincipalName,
-			CustomMessage: inviteReq.CustomMessage,
-			SchoolCode:    inviteReq.SchoolCode,
+			ToEmail:       req.ToEmail,
+			SchoolName:    req.SchoolName,
+			PrincipalName: req.PrincipalName,
+			CustomMessage: req.CustomMessage,
 		}
 		if err := inviteService.SendInviteEmail(mreq); err != nil {
 			http.Error(w, "Failed to send invite", http.StatusInternalServerError)

@@ -51,9 +51,9 @@ function clearAuthToken() {
 }
 
 function isAuthenticated() {
-    if (localStorage.getItem('authToken')) return true;
     const cookieValue = document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('auth_token='));
-    return !!cookieValue;
+    if (cookieValue) return true;
+    return !!localStorage.getItem('authToken');
 }
 
 function getCurrentUser() {

@@ -23,85 +23,29 @@
             </div>
             
                         <div class="summary-stats">
-                <div class="summary-stat">
-                    <div class="summary-stat__value">{{.Summary.TotalRegistrations}}</div>
-                    <div class="summary-stat__label">Total Registrations</div>
-                </div>
-                <div class="summary-stat">
-                    <div class="summary-stat__value">{{.Summary.ConfirmedRegistrations}}</div>
-                    <div class="summary-stat__label">Confirmed</div>
-                </div>
-                <div class="summary-stat">
-                    <div class="summary-stat__value">{{.Summary.PendingRegistrations}}</div>
-                    <div class="summary-stat__label">Pending</div>
-                </div>
-                <div class="summary-stat">
-                    <div class="summary-stat__value">{{.Summary.TeamEvents}}</div>
-                    <div class="summary-stat__label">Team Events</div>
-                </div>
-            </div>
-            
-            <div class="summary-content">
-                <div class="summary-section">
-                    <h2 class="summary-section__title">
-                        <span class="summary-section__icon">✧</span>
-                        Profile Information
-                    </h2>
-                    <div class="profile-section">
-                        <div class="profile-item">
-                            <label>Name:</label>
-                            <span>{{.User.Fullname}}</span>
-                        </div>
-                        <div class="profile-item">
-                            <label>Email:</label>
-                            <span>{{.User.Email}}</span>
-                        </div>
-                        <div class="profile-item">
-                            <label>Institution:</label>
-                            <span>{{.User.InstitutionName}}</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="summary-section">
-                    <h2 class="summary-section__title">
-                        <span class="summary-section__icon">⌘</span>
-                        Event Registrations
-                    </h2>
-                    <div class="registrations-list">
-                        {{range $eventID, $participants := .User.Registrations}}
-                        <div class="registration-card">
-                            <h3>{{$eventID}}</h3>
-                            <div class="participants">
-                                {{range $participants}}
-                                <div class="participant">
-                                    <span>{{.Name}}</span>
-                                    <span>Class {{.Class}}</span>
-                                </div>
-                                {{end}}
+                            <div class="summary-stat">
+                                <div class="summary-stat__value" id="total-registrations">0</div>
+                                <div class="summary-stat__label">Total Registrations</div>
                             </div>
+                            <div class="summary-stat">
+                                <div class="summary-stat__value" id="confirmed-registrations">0</div>
+                                <div class="summary-stat__label">Confirmed</div>
+                            </div>
+                            <div class="summary-stat">
+                                <div class="summary-stat__value" id="pending-registrations">0</div>
+                                <div class="summary-stat__label">Pending</div>
+                            </div>
+                            
                         </div>
-                        {{end}}
-                    </div>
-                </div>
-                
-                <div class="summary-actions">
-                    <button class="btn btn--primary" onclick="window.location.href='/events'">
-                        Register for More Events
-                    </button>
-                    <button class="btn btn--secondary">
-                        Edit Profile
-                    </button>
-                </div>
             
             <div class="summary-content">
                 <div class="summary-section">
                     <h2 class="summary-section__title">
                         <span class="summary-section__icon">✧</span>
-                        Profile Information
+                        School Information
                     </h2>
                     <div class="profile-section" id="profile-section">
-                        <div class="loading-placeholder">Loading profile...</div>
+                        <div class="loading-placeholder">Loading school information...</div>
                     </div>
                 </div>
                 
@@ -132,5 +76,6 @@
     <script src="/js/api.js"></script>
     <script src="/js/utils.js"></script>
     <script src="/js/navigation.js"></script>
+    <script src="/js/summary.js"></script>
 </body>
 </html>

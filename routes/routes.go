@@ -183,11 +183,21 @@ func SetupRoutes() *http.ServeMux {
 								user.PrincipalsEmail = v
 							}
 							if v, ok := ui["individual"].(bool); ok {
-								user.Individual = "true"
-								_ = v
+								user.Individual = v
 							}
 							data.User = user
 						}
+
+						summary := &templates.Summary{}
+						if v, ok := dataMap["total_events_registered"].(float64); ok {
+							summary.TotalRegistrations = int(v)
+						}
+						if v, ok := dataMap["total_participants"].(float64); ok {
+							summary.ConfirmedRegistrations = int(v)
+						}
+						summary.PendingRegistrations = 0
+						summary.TeamEvents = 0
+						data.Summary = summary
 					}
 				}
 			}

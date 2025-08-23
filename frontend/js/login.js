@@ -1,5 +1,5 @@
 class LoginPage {
-    constructor() {
+constructor() {
         this.authMode = 'login';
         this.currentEmail = '';
         this.otpResendTimeout = null;
@@ -96,7 +96,6 @@ class LoginPage {
         const formData = new FormData(e.target);
         const email = formData.get('email');
         const password = formData.get('password');
-    const schoolCode = formData.get('school_code');
         
         if (!this.validateEmail(email)) {
             this.showFieldError('email', 'Please enter a valid email address');
@@ -110,11 +109,7 @@ class LoginPage {
             if (this.authMode === 'login') {
                 await this.handleLogin(email, password);
             } else {
-                if (!schoolCode || String(schoolCode).trim() === '') {
-                    this.showFieldError('school_code', 'School code is required for signup');
-                    return;
-                }
-                await this.handleRegister(email, String(schoolCode).trim());
+                    await this.handleRegister(email);
             }
         } catch (error) {
             console.error('Auth error:', error);
@@ -154,7 +149,7 @@ class LoginPage {
         try {
             const response = await ExunServices.api.apiRequest('/auth/send-otp', {
                 method: 'POST',
-                body: JSON.stringify({ email, school_code: schoolCode })
+                    body: JSON.stringify({ email })
             });
             
             if (response.status === 'success') {
@@ -236,8 +231,8 @@ class LoginPage {
         try {
             const response = await ExunServices.api.apiRequest('/auth/complete', { method: 'POST', body: JSON.stringify({ username: this.currentEmail, password: pwd }) });
             if (response.status === 'success') {
-                Utils.showToast('Signup complete. Redirecting...', 'success');
-                setTimeout(() => window.location.href = '/summary', 800);
+                Utils.showToast('Signup complete. Redirecting to profile completion...', 'success');
+                setTimeout(() => window.location.href = '/signup', 800);
             } else {
                 Utils.showToast(response.error || 'Failed to set password', 'error');
             }
@@ -289,7 +284,6 @@ class LoginPage {
             if (switchText) switchText.textContent = "Don't have an account? ";
             if (switchLink) switchLink.textContent = 'Register here';
             if (passwordGroup) passwordGroup.style.display = 'flex';
-            const sc = document.getElementById('school-code-group'); if (sc) sc.style.display = 'none';
         } else {
             if (title) title.textContent = 'Join Exun 2025';
             if (subtitle) subtitle.textContent = 'Create your account to register for events';
@@ -297,7 +291,6 @@ class LoginPage {
             if (switchText) switchText.textContent = 'Already have an account? ';
             if (switchLink) switchLink.textContent = 'Sign in here';
             if (passwordGroup) passwordGroup.style.display = 'none';
-            const sc = document.getElementById('school-code-group'); if (sc) sc.style.display = 'block';
         }
     }
 
@@ -373,4 +366,4 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.body.dataset.page === 'login') {
         new LoginPage();
     }
-});
+    });

@@ -19,7 +19,8 @@
         <div class="event-detail-header">
             <div class="container">
                 <h1 class="event-detail-title">{{.Event.Name}}</h1>
-                <p class="event-detail-subtitle">Event Details</p>
+                <p class="event-detail-subtitle" style="font-weight: 700; font-size: 2vw;">Event Details</p>
+                {{if .Event.DescriptionShort}}<p class="description-short">{{.Event.DescriptionShort}}</p>{{end}}
             </div>
         </div>
         
@@ -32,18 +33,12 @@
                         </div>
                         <div class="event-detail__header-content">
                             <h1 class="event-detail__title">{{.Event.Name}}</h1>
-                            <div class="event-detail__meta">
-                                <span class="event-detail__mode">{{.Event.Mode}}</span>
-                                <span class="event-detail__participants">{{.Event.Participants}} participants</span>
-                                <span class="event-detail__points">{{.Event.Points}} Points</span>
-                            </div>
                         </div>
                     </div>
                     
                     <div class="event-description">
                         <h2>About This Event</h2>
                         <div class="description-content">
-                            {{if .Event.DescriptionShort}}<p class="description-short">{{.Event.DescriptionShort}}</p>{{end}}
                             {{if .Event.DescriptionLong}}<div class="description-long">{{.Event.DescriptionLong}}</div>{{end}}
                             {{if not .Event.DescriptionShort}}{{if not .Event.DescriptionLong}}<p>Details coming soon.</p>{{end}}{{end}}
                         </div>
@@ -51,7 +46,7 @@
                 </div>
                 
                 <div class="event-detail-sidebar">
-                    <div class="event-info-card">
+                    <div class="event-info-card" style="padding-bottom: 5vw;">
                         <h3 class="event-info-card__title">Event Information</h3>
                         <div class="event-info">
                             <div class="event-info-item">
