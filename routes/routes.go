@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -41,6 +42,13 @@ func getTemplateData(r *http.Request) templates.TemplateData {
 	data.IsBrochure = (r.URL.Path == "/brochure")
 
 	return data
+}
+
+func escapeForJSLiteral(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "`", "\\`")
+	s = strings.ReplaceAll(s, "$", "\\$")
+	return s
 }
 
 func SetupRoutes() *http.ServeMux {
@@ -219,6 +227,11 @@ func SetupRoutes() *http.ServeMux {
 		case "/brochure":
 			data := getTemplateData(r)
 			data.PageTitle = "Brochure | Exun 2025"
+			if b, err := os.ReadFile("frontend/data/invite.md"); err == nil {
+				data.BrochureMarkdown = string(b)
+			} else if b2, err2 := os.ReadFile("data/invite.md"); err2 == nil {
+				data.BrochureMarkdown = string(b2)
+			}
 			templates.RenderTemplate(w, "brochure", data)
 			return
 		case "/login":

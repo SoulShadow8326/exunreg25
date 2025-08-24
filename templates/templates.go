@@ -12,19 +12,20 @@ import (
 var templates *template.Template
 
 type TemplateData struct {
-	IsAuthenticated bool
-	IsAdmin         bool
-	IsHome          bool
-	IsEvents        bool
-	IsBrochure      bool
-	User            *User
-	Event           *Event
-	Events          []Event
-	Categories      []Category
-	Stats           *AdminStats
-	Summary         *Summary
-	PageTitle       string
-	CurrentPath     string
+	IsAuthenticated  bool
+	IsAdmin          bool
+	IsHome           bool
+	IsEvents         bool
+	IsBrochure       bool
+	BrochureMarkdown string
+	User             *User
+	Event            *Event
+	Events           []Event
+	Categories       []Category
+	Stats            *AdminStats
+	Summary          *Summary
+	PageTitle        string
+	CurrentPath      string
 }
 
 type Category struct {

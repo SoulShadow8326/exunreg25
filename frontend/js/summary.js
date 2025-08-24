@@ -369,7 +369,7 @@ class SummaryPage {
         const rows = [];
         const initialData = [];
 
-        const closeEditorSafely = () => { try { container.remove(); cardEl.classList.remove('registration-card--open'); } catch (e) { /* ignore */ } };
+        const closeEditorSafely = () => { try { container.remove(); cardEl.classList.remove('registration-card--open'); } catch (e) {} };
 
         const createRow = (p) => {
             const row = document.createElement('div');
