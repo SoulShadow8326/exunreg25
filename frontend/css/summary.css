@@ -290,7 +290,7 @@
     height: 44px;
     font-size: 15px;
     color: #111827;
-    font-family: 'Raleway', sans-serif;
+    font-family: 'RalewayLocal', Raleway, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
     transition: box-shadow 160ms ease, border-color 160ms ease, transform 120ms ease;
 }
 
@@ -302,7 +302,7 @@
     height: 44px;
     font-size: 15px;
     color: #0f172a;
-    font-family: 'Raleway', sans-serif;
+    font-family: 'RalewayLocal', Raleway, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
 }
 

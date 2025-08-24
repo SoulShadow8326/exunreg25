@@ -38,6 +38,7 @@ func getTemplateData(r *http.Request) templates.TemplateData {
 
 	data.IsHome = (r.URL.Path == "/" || r.URL.Path == "/index")
 	data.IsEvents = (r.URL.Path == "/events")
+	data.IsBrochure = (r.URL.Path == "/brochure")
 
 	return data
 }

@@ -93,6 +93,7 @@
     border: 0.125rem solid rgba(56, 58, 60, 0.12);
     border-radius: 0.625rem; 
     font-size: 1rem; 
+    font-family: 'RalewayLocal', Raleway, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
     transition: all 0.2s ease;
     background: var(--white);
     margin-bottom: 0.5rem;
@@ -256,6 +257,7 @@ body[data-page="complete"] .form-input {
     width: 22rem; 
     max-width: 85%;
     min-width: 0;
+    font-family: 'RalewayLocal', Raleway, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
 }
 
 body[data-page="complete"] input[type="checkbox"] {

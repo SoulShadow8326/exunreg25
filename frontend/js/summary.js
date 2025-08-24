@@ -368,31 +368,99 @@ class SummaryPage {
 
         const rows = [];
         const initialData = [];
-        for (let i = 0; i < capacity; i++) {
-            const p = members[i] || {};
-            initialData.push({ name: p.name||p.Name||'', email: p.email||p.Email||'', class: p.class||p.Class||'', phone: p.phone||p.Phone||'' });
+
+        const closeEditorSafely = () => { try { container.remove(); cardEl.classList.remove('registration-card--open'); } catch (e) { /* ignore */ } };
+
+        const createRow = (p) => {
             const row = document.createElement('div');
             row.className = 'inline-member-row';
             row.style.display = 'grid';
             row.style.gridTemplateColumns = '1fr 1fr 90px 130px auto';
             row.style.gap = '12px';
             row.style.marginBottom = '10px';
+            const nameVal = String(p && (p.name||p.Name) || '');
+            const emailVal = String(p && (p.email||p.Email) || '');
+            const classVal = String(p && (p.class||p.Class) || '');
+            const phoneVal = String(p && (p.phone||p.Phone) || '');
             row.innerHTML = `
-                <input class="form-input" data-name="name" placeholder="Full name" value="${p.name||p.Name||''}" />
-                <input class="form-input" data-name="email" placeholder="Email" value="${p.email||p.Email||''}" />
-                <input class="form-input" data-name="class" placeholder="Class" value="${p.class||p.Class||''}" />
-                <input class="form-input" data-name="phone" placeholder="Phone" value="${p.phone||p.Phone||''}" />
+                <input class="form-input" data-name="name" placeholder="Full name" value="${nameVal.replace(/\"/g,'&quot;')}" />
+                <input class="form-input" data-name="email" placeholder="Email" value="${emailVal.replace(/\"/g,'&quot;')}" />
+                <input class="form-input" data-name="class" placeholder="Class" value="${classVal.replace(/\"/g,'&quot;')}" />
+                <input class="form-input" data-name="phone" placeholder="Phone" value="${phoneVal.replace(/\"/g,'&quot;')}" />
                 <button class="btn btn--tertiary btn-inline-clear"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-delete-icon lucide-delete"><path d="M10 5a2 2 0 0 0-1.344.519l-6.328 5.74a1 1 0 0 0 0 1.481l6.328 5.741A2 2 0 0 0 10 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/><path d="m12 9 6 6"/><path d="m18 9-6 6"/></svg></button>
             `;
-            row.querySelector('.btn-inline-clear').addEventListener('click', (e) => {
+            const clearBtn = row.querySelector('.btn-inline-clear');
+            clearBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                ['name','email','class','phone'].forEach(f => row.querySelector(`[data-name="${f}"]`).value = '');
+                if (rows.length <= 1) {
+                    closeEditorSafely();
+                    return;
+                }
+                const idx = rows.indexOf(row);
+                if (idx !== -1) rows.splice(idx, 1);
+                row.remove();
+                if (addBtn) {
+                    if (rows.length >= capacity) {
+                        addBtn.classList.add('is-disabled');
+                        addBtn.setAttribute('aria-disabled', 'true');
+                    } else {
+                        addBtn.classList.remove('is-disabled');
+                        addBtn.removeAttribute('aria-disabled');
+                    }
+                }
             });
-            rows.push(row);
-            container.appendChild(row);
+            return row;
+        };
+
+        const initialCount = Math.max(1, Math.min(members.length, capacity));
+        for (let i = 0; i < initialCount; i++) {
+            const p = members[i] || {};
+            const r = createRow(p);
+            rows.push(r);
+            container.appendChild(r);
+            initialData.push({ name: r.querySelector('[data-name="name"]').value || '', email: r.querySelector('[data-name="email"]').value || '', class: r.querySelector('[data-name="class"]').value || '', phone: r.querySelector('[data-name="phone"]').value || '' });
         }
 
         container.__initialData = JSON.stringify(initialData);
+
+        const addBtn = document.createElement('button');
+        addBtn.className = 'btn btn--tertiary';
+        addBtn.textContent = 'Add participant';
+        addBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (rows.length >= capacity) {
+                Utils.showToast('Max participants reached', 'error');
+                return;
+            }
+            const existingIndex = rows.length;
+            const p = members[existingIndex] || {};
+            const nr = createRow(p);
+            rows.push(nr);
+            if (addContainer) container.insertBefore(nr, addContainer);
+            if (rows.length >= capacity) {
+                addBtn.classList.add('is-disabled');
+                addBtn.setAttribute('aria-disabled', 'true');
+            } else {
+                addBtn.classList.remove('is-disabled');
+                addBtn.removeAttribute('aria-disabled');
+            }
+            setTimeout(() => { const first = nr.querySelector('input[data-name="name"]'); if (first) first.focus(); }, 20);
+        });
+        const addContainer = document.createElement('div');
+        addContainer.style.marginTop = '8px';
+        addContainer.style.display = 'flex';
+        addContainer.style.justifyContent = 'flex-start';
+        addContainer.appendChild(addBtn);
+        container.appendChild(addContainer);
+        if (addBtn) {
+            if (rows.length >= capacity) {
+                addBtn.classList.add('is-disabled');
+                addBtn.setAttribute('aria-disabled', 'true');
+            } else {
+                addBtn.classList.remove('is-disabled');
+                addBtn.removeAttribute('aria-disabled');
+            }
+        }
 
         const actions = document.createElement('div');
         actions.style.marginTop = '14px';
@@ -575,7 +643,8 @@ class SummaryPage {
 
     async handleLogout() {
         try {
-            await ExunServices.auth.logout();
+            try { await ExunServices.api.apiRequest('/auth/logout', { method: 'POST' }); } catch(e) {}
+            ExunServices.api.clearAuthToken();
             Utils.showToast('Logged out successfully', 'success');
             Utils.redirect('/login', 1000);
         } catch (error) {

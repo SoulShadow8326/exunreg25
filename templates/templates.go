@@ -16,6 +16,7 @@ type TemplateData struct {
 	IsAdmin         bool
 	IsHome          bool
 	IsEvents        bool
+	IsBrochure      bool
 	User            *User
 	Event           *Event
 	Events          []Event

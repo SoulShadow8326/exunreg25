@@ -5,15 +5,14 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     message.textContent = '';
     const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value;
-    if (!username || !password) {
-      message.textContent = 'Username and password are required';
+    if (!username) {
+      message.textContent = 'Username is required';
       return;
     }
     try {
   const resp = await ExunServices.api.apiRequest('/auth/complete', {
         method: 'POST',
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username })
       });
       if (resp.status === 'success') {
         message.textContent = 'Signup complete. Redirecting to profile completion...';

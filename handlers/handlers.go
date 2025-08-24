@@ -1,11 +1,8 @@
 package handlers
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"net/http"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -105,75 +102,12 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var loginData struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&loginData); err != nil {
-		response := Response{
-			Status: "error",
-			Error:  "Invalid request body",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	userData, err := globalDB.Get("users", loginData.Email)
-	if err != nil {
-		response := Response{
-			Status: "error",
-			Error:  "User not found",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	user := userData.(*db.User)
-	hashed := sha256.Sum256([]byte(os.Getenv("AUTH_SALT") + loginData.Password))
-	if user.PasswordHash == "" || user.PasswordHash != hex.EncodeToString(hashed[:]) {
-		response := Response{
-			Status: "error",
-			Error:  "Invalid credentials",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	authToken := sha256.Sum256([]byte(loginData.Email + os.Getenv("AUTH_SALT")))
-	tokenStr := hex.EncodeToString(authToken[:])
-	http.SetCookie(w, &http.Cookie{
-		Name:     "email",
-		Value:    loginData.Email,
-		Path:     "/",
-		HttpOnly: true,
-		Expires:  time.Now().Add(24 * time.Hour),
-	})
-	http.SetCookie(w, &http.Cookie{
-		Name:     "auth_token",
-		Value:    tokenStr,
-		Path:     "/",
-		HttpOnly: true,
-		Expires:  time.Now().Add(24 * time.Hour),
-	})
-
 	response := Response{
-		Status:  "success",
-		Message: "Login successful",
-		Data: map[string]interface{}{
-			"email": loginData.Email,
-			"token": tokenStr,
-		},
+		Status: "error",
+		Error:  "Password-based login is deprecated. Please use OTP-based authentication via /api/auth/send-otp and /api/auth/verify-otp.",
 	}
-
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusNotImplemented)
 	json.NewEncoder(w).Encode(response)
 }
 

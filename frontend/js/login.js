@@ -13,8 +13,7 @@ constructor() {
 
     setupEventListeners() {
         const authForm = document.getElementById('auth-form');
-        const otpForm = document.getElementById('otp-form');
-    const setPasswordForm = document.getElementById('set-password-form');
+    const otpForm = document.getElementById('otp-form');
         const switchBtn = document.getElementById('auth-switch');
         
         if (authForm) {
@@ -23,10 +22,6 @@ constructor() {
         
         if (otpForm) {
             otpForm.addEventListener('submit', (e) => this.handleOTPSubmit(e));
-        }
-
-        if (setPasswordForm) {
-            setPasswordForm.addEventListener('submit', (e) => this.handleSetPassword(e));
         }
         
         if (switchBtn) {
@@ -93,9 +88,8 @@ constructor() {
     async handleAuthSubmit(e) {
         e.preventDefault();
         
-        const formData = new FormData(e.target);
-        const email = formData.get('email');
-        const password = formData.get('password');
+    const formData = new FormData(e.target);
+    const email = formData.get('email');
         
         if (!this.validateEmail(email)) {
             this.showFieldError('email', 'Please enter a valid email address');
@@ -106,10 +100,18 @@ constructor() {
         Utils.setLoading(submitBtn, true);
         
         try {
-            if (this.authMode === 'login') {
-                await this.handleLogin(email, password);
+            const response = await ExunServices.api.apiRequest('/auth/send-otp', { method: 'POST', body: JSON.stringify({ email }) });
+            if (response && response.status === 'success') {
+                this.currentEmail = email;
+                this.showOTPForm();
+                if (response.data && response.data.user_exists) {
+                    Utils.showToast('Existing user detected. Enter your school code (OTP) to login.', 'info');
+                } else {
+                    Utils.showToast('OTP sent to your email', 'success');
+                }
+                this.startResendTimer();
             } else {
-                    await this.handleRegister(email);
+                throw new Error((response && response.error) ? response.error : 'Failed to send OTP');
             }
         } catch (error) {
             console.error('Auth error:', error);
@@ -119,30 +121,6 @@ constructor() {
         }
     }
 
-    async handleLogin(email, password) {
-        if (!password) {
-            this.showFieldError('password', 'Password is required');
-            return;
-        }
-
-        try {
-            const response = await ExunServices.api.apiRequest('/users/login', {
-                method: 'POST',
-                body: JSON.stringify({ email, password })
-            });
-            
-            if (response.status === 'success') {
-                Utils.showToast('Login successful!', 'success');
-                const loginToken = (response.data && response.data.token) || response.token || null;
-                if (loginToken) ExunServices.api.setAuthToken(loginToken);
-                setTimeout(() => window.location.href = '/summary', 1000);
-            } else {
-                throw new Error(response.error || 'Login failed');
-            }
-        } catch (error) {
-            throw new Error(error.message || 'Login failed');
-        }
-    }
 
     async handleRegister(email, schoolCode) {
         this.currentEmail = email;
@@ -189,14 +167,9 @@ constructor() {
                 if (otpToken) {
                     ExunServices.api.setAuthToken(otpToken);
                 }
-
-                if (this.authMode === 'register' || response.needs_signup) {
-                    Utils.showToast('OTP verified! Set a password to complete registration', 'success');
-                    this.showSetPasswordForm();
-                } else {
-                    Utils.showToast('Login successful!', 'success');
-                    setTimeout(() => window.location.href = '/summary', 1000);
-                }
+                Utils.showToast('Login successful!', 'success');
+                const needsComplete = response.data && response.data.needs_complete;
+                setTimeout(() => window.location.href = (needsComplete ? '/complete' : '/summary'), 1000);
             } else {
                 throw new Error(response.error || 'Invalid OTP');
             }
@@ -209,51 +182,19 @@ constructor() {
         }
     }
 
-    showSetPasswordForm() {
-        const otpContainer = document.getElementById('otp-container');
-        const setPasswordContainer = document.getElementById('set-password-container');
-        if (otpContainer) otpContainer.style.display = 'none';
-        if (setPasswordContainer) setPasswordContainer.style.display = 'block';
-    }
-
-    async handleSetPassword(e) {
-        e.preventDefault();
-        const pwd = document.getElementById('new_password')?.value || '';
-        const confirm = document.getElementById('confirm_password')?.value || '';
-        if (pwd.length < 6) {
-            Utils.showToast('Password must be at least 6 characters', 'error');
-            return;
-        }
-        if (pwd !== confirm) {
-            Utils.showToast('Passwords do not match', 'error');
-            return;
-        }
-        try {
-            const response = await ExunServices.api.apiRequest('/auth/complete', { method: 'POST', body: JSON.stringify({ username: this.currentEmail, password: pwd }) });
-            if (response.status === 'success') {
-                Utils.showToast('Signup complete. Redirecting to profile completion...', 'success');
-                setTimeout(() => window.location.href = '/signup', 800);
-            } else {
-                Utils.showToast(response.error || 'Failed to set password', 'error');
-            }
-        } catch (err) {
-            Utils.showToast(err.message || 'Failed to set password', 'error');
-        }
-    }
 
     async resendOTP() {
         const resendLink = document.getElementById('resend-otp');
         Utils.setLoading(resendLink, true);
         
         try {
-            const response = await ExunServices.auth.sendOTP(this.currentEmail);
-            
-            if (response.success) {
+            const response = await ExunServices.api.apiRequest('/auth/send-otp', { method: 'POST', body: JSON.stringify({ email: this.currentEmail }) });
+            if (response && response.status === 'success') {
                 Utils.showToast('New OTP sent to your email', 'success');
                 this.startResendTimer();
                 this.clearOTPInputs();
             } else {
-                throw new Error(response.message || 'Failed to resend OTP');
+                throw new Error((response && response.error) ? response.error : 'Failed to resend OTP');
             }
         } catch (error) {
             console.error('Resend OTP error:', error);
@@ -277,21 +218,12 @@ constructor() {
         const switchLink = document.getElementById('auth-switch');
         const passwordGroup = document.getElementById('password-group');
 
-        if (this.authMode === 'login') {
-            if (title) title.textContent = 'Welcome Back';
-            if (subtitle) subtitle.textContent = 'Sign in to your Exun 2025 account';
-            if (submitBtn) submitBtn.textContent = 'Sign In';
-            if (switchText) switchText.textContent = "Don't have an account? ";
-            if (switchLink) switchLink.textContent = 'Register here';
-            if (passwordGroup) passwordGroup.style.display = 'flex';
-        } else {
-            if (title) title.textContent = 'Join Exun 2025';
-            if (subtitle) subtitle.textContent = 'Create your account to register for events';
-            if (submitBtn) submitBtn.textContent = 'Send OTP';
-            if (switchText) switchText.textContent = 'Already have an account? ';
-            if (switchLink) switchLink.textContent = 'Sign in here';
-            if (passwordGroup) passwordGroup.style.display = 'none';
-        }
+    if (title) title.textContent = (this.authMode === 'login') ? 'Welcome Back' : 'Join Exun 2025';
+    if (subtitle) subtitle.textContent = (this.authMode === 'login') ? 'Sign in to your Exun 2025 account' : 'Create your account to register for events';
+    if (submitBtn) submitBtn.textContent = 'Send OTP';
+    if (switchText) switchText.textContent = (this.authMode === 'login') ? "Don't have an account? " : 'Already have an account? ';
+    if (switchLink) switchLink.textContent = (this.authMode === 'login') ? 'Register here' : 'Sign in here';
+    if (passwordGroup) passwordGroup.style.display = 'none';
     }
 
     showOTPForm() {
