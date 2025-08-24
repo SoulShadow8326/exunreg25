@@ -65,24 +65,10 @@ class EventDetailPage {
         if (titleEl) titleEl.textContent = this.event.name;
         if (subtitleEl) subtitleEl.textContent = this.event.subtitle || 'Event Details';
 
-    const imageUrl = this.event.image ? (this.event.image.toString().startsWith('/') ? this.event.image : `/illustrations/${this.event.image.toString().split('/').pop()}`) : '/assets/exun_base.webp';
-        const headerContainer = document.querySelector('.event-detail-main');
-        if (headerContainer) {
-            headerContainer.insertAdjacentHTML('afterbegin', `
-                <div class="event-detail__header">
-                    <div class="event-detail__image-container">
-                        <img src="${imageUrl}" alt="${this.event.name}" class="event-detail__image" />
-                    </div>
-                    <div class="event-detail__header-content">
-                        <h1 class="event-detail__title">${this.event.name}</h1>
-                        <div class="event-detail__meta">
-                            <span class="event-detail__mode">${Utils.formatEventMode(this.event.mode)}</span>
-                            <span class="event-detail__participants">${this.event.participants ? Utils.formatParticipants(this.event.participants) : 'TBA'}</span>
-                            <span class="event-detail__points">${this.event.points || 0} Points</span>
-                        </div>
-                    </div>
-                </div>
-            `);
+        const imgEl = document.querySelector('.event-detail__image');
+        if (imgEl) {
+            imgEl.src = this.event.image ? (this.event.image.toString().startsWith('/') ? this.event.image : `/illustrations/${this.event.image.toString().split('/').pop()}`) : '/assets/exun_base.webp';
+            imgEl.alt = this.event.name;
         }
     }
 
@@ -174,7 +160,9 @@ class EventDetailPage {
                     Utils.redirect('/login', 100);
                     return;
                 }
-                this.handleRegistration();
+                const slug = this.event && this.event.name ? String(this.event.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : (this.event && (this.event.id || this.event.ID || this.eventId) || '');
+                const url = `/summary?open=${encodeURIComponent(slug)}`;
+                window.location.href = url;
             });
         }
 
@@ -186,46 +174,40 @@ class EventDetailPage {
 
     async handleRegistration() {
         try {
-            const eventId = this.event.id || this.event.name;
+            const urlParams = new URLSearchParams(window.location.search);
+            const eventId = urlParams.get('id') || this.event.id || this.event.name;
             const eventParticipants = this.event.participants || 1;
-            const isIndividual = this.event.individual === true || this.event.independent_registration === true || this.event.independent_registration === undefined;
 
-            let participants = [];
-
-            if (isIndividual || eventParticipants === 1) {
-                const profileResp = await ExunServices.api.apiRequest('/auth/profile');
-                if (!profileResp || profileResp.status !== 'success') {
-                    Utils.showToast('Failed to fetch profile. Please complete signup.', 'error');
-                    return;
-                }
-                const user = profileResp.data;
-                participants.push({ name: user.fullname || user.username || user.email, email: user.email, class: user.class || 0, phone: user.phone_number || '' });
-            } else {
-                for (let i = 0; i < eventParticipants; i++) {
-                    const name = prompt(`Participant ${i+1} name:`);
-                    if (!name) { Utils.showToast('Registration cancelled', 'info'); return; }
-                    const email = prompt(`Participant ${i+1} email:`);
-                    if (!email) { Utils.showToast('Registration cancelled', 'info'); return; }
-                    const classStr = prompt(`Participant ${i+1} class (1-12):`);
-                    const cls = parseInt(classStr || '0', 10) || 0;
-                    const phone = prompt(`Participant ${i+1} phone (10 digits):`) || '';
-                    participants.push({ name, email, class: cls, phone });
-                }
+            const profileResp = await ExunServices.api.apiRequest('/auth/profile');
+            if (!profileResp || profileResp.status !== 'success') {
+                Utils.redirect('/login', 100);
+                return;
+            }
+            const user = profileResp.data;
+            if (!user) {
+                Utils.redirect('/complete_signup', 100);
+                return;
             }
 
-            const payload = { id: eventId, data: participants };
-            const response = await ExunServices.api.apiRequest('/submit_registrations', { method: 'POST', body: JSON.stringify(payload) });
-            if (response && response.status === 'success') {
-                Utils.showToast('Registration submitted!', 'success');
-                setTimeout(() => Utils.redirect('/summary', 800), 800);
-            } else {
-                throw new Error(response && response.error ? response.error : 'Registration failed');
+            const userIsIndividual = user.individual === true || user.Individual === true;
+            if (userIsIndividual && !this.event.independent_registration) {
+                Utils.showToast('Individual registration not allowed for this event', 'error');
+                return;
             }
+
+            return;
         } catch (error) {
             console.error('Registration failed:', error);
             Utils.showToast(error.message || 'Registration failed. Please try again.', 'error');
+            return;
         }
+
     }
+
+    openRegistrationModal() {
+    Utils.showToast('Please register from the Summary page', 'info');
+    }
+    
 }
 
 function isAuthenticatedUser() {

@@ -270,6 +270,37 @@ body[data-page="complete"] .login-form .login-btn {
     border-radius: 10px;
 }
 
+body[data-page="complete"] .button-row .login-btn {
+    width: auto;
+}
+
+.button-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    align-items: center;
+}
+
+.button-row .login-btn {
+    width: auto;
+    flex: 0 0 auto;
+}
+
+.button-row .login-btn#back-to-profile {
+    background: #ffffff;
+    border: none;
+}
+
+@media (max-width: 480px) {
+    .button-row {
+        flex-direction: column;
+    }
+    .button-row .login-btn {
+        width: 100%;
+    }
+}
+
 @media (max-width: 880px) {
     body[data-page="complete"] .profile-grid {
         flex-direction: column;

@@ -26,42 +26,43 @@
                                 <div>
                                     <div class="form-group">
                                         <label class="form-label" for="fullname">Full name</label>
-                                        <input class="form-input" id="fullname" name="fullname" type="text" aria-describedby="err_fullname" />
+                                        <input class="form-input" id="fullname" name="fullname" type="text" aria-describedby="err_fullname" value="{{if .User}}{{.User.Fullname}}{{end}}" />
                                         <div class="form-error" id="err_fullname" aria-live="polite"></div>
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label" for="phone_number">Phone number</label>
-                                        <input class="form-input" id="phone_number" name="phone_number" type="tel" aria-describedby="err_phone_number" />
+                                        <input class="form-input" id="phone_number" name="phone_number" type="tel" aria-describedby="err_phone_number" value="{{if .User}}{{.User.PhoneNumber}}{{end}}" />
                                         <div class="form-error" id="err_phone_number" aria-live="polite"></div>
                                     </div>
                                     <div class="form-group" id="principal-email-field">
                                         <label class="form-label" for="principals_email">Principal's email</label>
-                                        <input class="form-input" id="principals_email" name="principals_email" type="email" aria-describedby="err_principals_email" />
+                                        <input class="form-input" id="principals_email" name="principals_email" type="email" aria-describedby="err_principals_email" value="{{if .User}}{{.User.PrincipalsEmail}}{{end}}" />
                                         <div class="form-error" id="err_principals_email" aria-live="polite"></div>
                                     </div>
                                 </div>
                                 <div>
                     <div class="form-group" id="institution-field">
                         <label class="form-label" for="institution_name">Institution name</label>
-                        <input class="form-input" id="institution_name" name="institution_name" type="text" />
+                        <input class="form-input" id="institution_name" name="institution_name" type="text" value="{{if .User}}{{.User.InstitutionName}}{{end}}" />
                     </div>
 
                                     <div class="form-group">
                                         <label class="form-label" for="address">Address</label>
-                                        <input class="form-input" id="address" name="address" type="text" />
+                                        <input class="form-input" id="address" name="address" type="text" value="{{if .User}}{{.User.Address}}{{end}}" />
                                     </div>
                                     <div class="form-group" id="principal-name-field">
                                         <label class="form-label" for="principals_name">Principal's name</label>
-                                        <input class="form-input" id="principals_name" name="principals_name" type="text" />
+                                        <input class="form-input" id="principals_name" name="principals_name" type="text" value="{{if .User}}{{.User.PrincipalsName}}{{end}}" />
                                     </div>
                                 </div>
                             </div>
                     <div class="form-group">
                         <label class="form-label" for="individual">Individual</label>
-                                            <input type="checkbox" id="individual" name="individual" />
+                                            <input type="checkbox" id="individual" name="individual" {{if .User}}{{if .User.Individual}}checked{{end}}{{end}} />
                     </div>
-                            <div class="form-group">
+                            <div class="form-group button-row">
                                 <button class="login-btn" type="button" id="save-profile">Save profile</button>
+                                <button class="login-btn" type="button" id="back-to-profile">Back to profile</button>
                             </div>
                         </form>
                     </div>
@@ -138,6 +139,7 @@
             const instField = document.getElementById('institution-field');
             const princField = document.getElementById('principal-name-field');
             const princEmailField = document.getElementById('principal-email-field');
+
             function toggleFields() {
                 const isInd = individualCheckbox ? individualCheckbox.checked : false;
                 if (instField) instField.style.display = isInd ? 'none' : 'block';
@@ -146,6 +148,22 @@
                 const principalsEmail = document.getElementById('principals_email');
                 if (principalsEmail) principalsEmail.required = !isInd;
             }
+
+            try {
+                const resp = await ExunServices.api.apiRequest('/complete');
+                if (resp && resp.status === 'success' && resp.data) {
+                    const vals = resp.data.values || {};
+                    if (vals.fullname) document.getElementById('fullname').value = vals.fullname;
+                    if (vals.phone_number) document.getElementById('phone_number').value = vals.phone_number;
+                    if (vals.principals_email) document.getElementById('principals_email').value = vals.principals_email;
+                    if (typeof vals.individual === 'boolean') document.getElementById('individual').checked = vals.individual;
+                    if (vals.institution_name) document.getElementById('institution_name').value = vals.institution_name;
+                    if (vals.address) document.getElementById('address').value = vals.address;
+                    if (vals.principals_name) document.getElementById('principals_name').value = vals.principals_name;
+                }
+            } catch (err) {
+            }
+
             if (individualCheckbox) {
                 individualCheckbox.addEventListener('change', toggleFields);
                 toggleFields();
@@ -154,6 +172,13 @@
                 e.preventDefault();
                 saveProfile();
             });
+            const backBtn = document.getElementById('back-to-profile');
+            if (backBtn) {
+                backBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    window.location.href = '/summary';
+                });
+            }
         });
     </script>
 </body>

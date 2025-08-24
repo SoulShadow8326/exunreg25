@@ -1,5 +1,10 @@
 console.log('summary.js loaded');
 
+function clientSlugify(s) {
+    if (!s) return '';
+    return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
 class SummaryPage {
     constructor() {
         this.userProfile = null;
@@ -24,6 +29,27 @@ class SummaryPage {
         await this.loadData();
         this.renderSummary();
         this.setupEventListeners();
+
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const openSlug = urlParams.get('open');
+            if (openSlug) {
+                const match = (this.registrations || []).find(r => {
+                    const name = r.eventName || r.event_name || r.EventName || r.event || '';
+                    const id = r.eventId || r.eventID || r.EventID || r.event_id || r.event || '';
+                    const slug = clientSlugify(name || id);
+                    return slug === openSlug || String(id) === openSlug;
+                });
+                if (match) {
+                    setTimeout(() => {
+                        const container = document.getElementById('registrations-container');
+                        if (!container) return;
+                        const card = container.querySelector(`.registration-card[data-event-id="${match.eventId || match.eventID || match.event_id || match.event}"]`);
+                        if (card) this.toggleInlineEditor(card, match);
+                    }, 120);
+                }
+            }
+        } catch (e) {}
     }
 
     async loadData() {
@@ -106,10 +132,11 @@ class SummaryPage {
     }
 
     calculateStats() {
-        const confirmed = this.registrations.filter(reg => reg.status === 'confirmed').length;
-        const pending = this.registrations.filter(reg => reg.status === 'pending').length;
+        const total = Array.isArray(this.registrations) ? this.registrations.length : 0;
+        const confirmed = (this.registrations || []).filter(reg => ((reg.status || reg.Status || '').toString().toLowerCase() === 'confirmed')).length;
+        const pending = (this.registrations || []).filter(reg => ((reg.status || reg.Status || '').toString().toLowerCase() === 'pending')).length;
         return {
-            totalRegistrations: this.registrations.length,
+            totalRegistrations: total,
             confirmedRegistrations: confirmed,
             pendingRegistrations: pending
         };
@@ -178,48 +205,318 @@ class SummaryPage {
                 ${this.registrations.map(registration => this.renderRegistrationCard(registration)).join('')}
             </div>
         `;
+
+        setTimeout(() => {
+            const viewBtns = registrationsContainer.querySelectorAll('.btn-view-details');
+            viewBtns.forEach(btn => {
+                btn.addEventListener('click', (ev) => {
+                    ev.stopPropagation();
+                    const eid = btn.dataset.eventId;
+                    if (!eid) return;
+                    const regObj = (Array.isArray(this.registrations) ? this.registrations.find(r => (r.eventId||r.eventID||r.event_id||r.event||'').toString()===eid.toString()) : null);
+                    const nameForSlug = (regObj && (regObj.eventName || regObj.event_name || regObj.EventName)) ? (regObj.eventName || regObj.event_name || regObj.EventName) : eid;
+                    const slug = clientSlugify(nameForSlug);
+                    window.location.href = `/${encodeURIComponent(slug)}`;
+                });
+            });
+
+            const regBtns = registrationsContainer.querySelectorAll('.btn-register');
+            regBtns.forEach(btn => {
+                btn.addEventListener('click', async (ev) => {
+                    ev.stopPropagation();
+                    const eid = btn.dataset.eventId;
+                    if (!eid) return;
+                    const card = registrationsContainer.querySelector(`.registration-card[data-event-id="${eid}"]`);
+                    const reg = this.registrations.find(r => (r.eventId || r.eventID || r.event_id || r.event || '').toString() === eid.toString());
+                    if (card) await this.toggleInlineEditor(card, reg);
+                });
+            });
+
+            const cards = registrationsContainer.querySelectorAll('.registration-card[data-event-id]');
+            cards.forEach(card => {
+                card.style.cursor = 'pointer';
+                card.addEventListener('click', async (ev) => {
+                    if (ev.target && ev.target.closest && ev.target.closest('button')) return;
+                    const eid = card.dataset.eventId;
+                    if (!eid) return;
+                    const reg = this.registrations.find(r => (r.eventId || r.eventID || r.event_id || r.event || '').toString() === eid.toString());
+                    await this.toggleInlineEditor(card, reg);
+                });
+            });
+        }, 20);
     }
 
+    async toggleInlineEditor(cardEl, registration) {
+        const existing = cardEl.querySelector('.inline-registration-editor');
+        const checkEditorDirty = (editorEl) => {
+            try {
+                const rawInitial = editorEl.__initialData || '[]';
+                let initial = [];
+                try { initial = JSON.parse(rawInitial); } catch (e) { initial = []; }
+                const inputs = Array.from(editorEl.querySelectorAll('.inline-member-row')).map(r => ({
+                    name: ((r.querySelector('[data-name="name"]')||{value:''}).value || '').trim(),
+                    email: ((r.querySelector('[data-name="email"]')||{value:''}).value || '').trim(),
+                    class: ((r.querySelector('[data-name="class"]')||{value:''}).value || '').trim(),
+                    phone: ((r.querySelector('[data-name="phone"]')||{value:''}).value || '').trim()
+                }));
+                if (initial.length !== inputs.length) return true;
+                for (let i = 0; i < inputs.length; i++) {
+                    const a = initial[i] || {};
+                    const b = inputs[i];
+                    if (String((a.name||'')).trim() !== b.name) return true;
+                    if (String((a.email||'')).trim() !== b.email) return true;
+                    if (String((a.class||'')).trim() !== b.class) return true;
+                    if (String((a.phone||'')).trim() !== b.phone) return true;
+                }
+                return false;
+            } catch (e) { return false; }
+        };
+
+        const showDiscardModal = (message) => {
+            return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.style.position = 'fixed';
+                overlay.style.inset = '0';
+                overlay.style.background = 'rgba(0,0,0,0.35)';
+                overlay.style.display = 'flex';
+                overlay.style.alignItems = 'center';
+                overlay.style.justifyContent = 'center';
+                overlay.style.zIndex = 9999;
+                overlay.tabIndex = 0;
+
+                const box = document.createElement('div');
+                box.style.background = '#fff';
+                box.style.borderRadius = '10px';
+                box.style.padding = '20px';
+                box.style.maxWidth = '420px';
+                box.style.width = '92%';
+                box.style.boxShadow = '0 20px 60px rgba(2,6,23,0.2)';
+                box.style.fontFamily = "'Raleway', sans-serif";
+
+                const title = document.createElement('div');
+                title.style.fontSize = '16px';
+                title.style.fontWeight = '700';
+                title.style.marginBottom = '8px';
+                title.textContent = 'Discard changes?';
+
+                const desc = document.createElement('div');
+                desc.style.fontSize = '14px';
+                desc.style.color = '#374151';
+                desc.style.marginBottom = '16px';
+                desc.textContent = message || 'You have unsaved changes. Are you sure you want to discard them?';
+
+                const actions = document.createElement('div');
+                actions.style.display = 'flex';
+                actions.style.justifyContent = 'flex-end';
+                actions.style.gap = '10px';
+
+                const cancel = document.createElement('button');
+                cancel.className = 'btn btn--secondary';
+                cancel.textContent = 'Keep editing';
+                const discard = document.createElement('button');
+                discard.className = 'btn btn--primary';
+                discard.textContent = 'Discard';
+
+                actions.appendChild(cancel);
+                actions.appendChild(discard);
+
+                box.appendChild(title);
+                box.appendChild(desc);
+                box.appendChild(actions);
+                overlay.appendChild(box);
+                document.body.appendChild(overlay);
+
+                const cleanup = () => {
+                    overlay.removeEventListener('keydown', onKeyDown);
+                    overlay.remove();
+                };
+
+                const onKeyDown = (ev) => {
+                    if (ev.key === 'Escape') { cleanup(); resolve(false); }
+                    if (ev.key === 'Enter') { cleanup(); resolve(true); }
+                };
+
+                cancel.addEventListener('click', () => { cleanup(); resolve(false); });
+                discard.addEventListener('click', () => { cleanup(); resolve(true); });
+                overlay.addEventListener('click', (ev) => { if (ev.target === overlay) { cleanup(); resolve(false); } });
+
+                overlay.addEventListener('keydown', onKeyDown);
+                setTimeout(() => { overlay.focus(); cancel.focus(); }, 10);
+            });
+        };
+
+        if (existing) {
+            if (checkEditorDirty(existing)) {
+                const confirmed = await showDiscardModal();
+                if (!confirmed) return;
+            }
+            existing.remove(); cardEl.classList.remove('registration-card--open');
+            return;
+        }
+
+        const eventId = cardEl.dataset.eventId;
+        const container = document.createElement('div');
+        container.className = 'inline-registration-editor summary-inline-animate';
+        container.setAttribute('role', 'region');
+        container.setAttribute('aria-label', `Edit registration for ${registration && (registration.eventName||registration.event_name||registration.EventName) || eventId}`);
+        container.style.marginTop = '12px';
+        container.style.padding = '14px 8px 0 8px';
+        container.style.borderTop = '1px solid rgba(0,0,0,0.06)';
+
+        const capacity = parseInt(registration && (registration.capacity || registration.Capacity) || 1, 10) || 1;
+        const members = (registration && (registration.participants || registration.teamMembers)) ? (registration.participants || registration.teamMembers) : [];
+
+        const rows = [];
+        const initialData = [];
+        for (let i = 0; i < capacity; i++) {
+            const p = members[i] || {};
+            initialData.push({ name: p.name||p.Name||'', email: p.email||p.Email||'', class: p.class||p.Class||'', phone: p.phone||p.Phone||'' });
+            const row = document.createElement('div');
+            row.className = 'inline-member-row';
+            row.style.display = 'grid';
+            row.style.gridTemplateColumns = '1fr 1fr 90px 130px auto';
+            row.style.gap = '12px';
+            row.style.marginBottom = '10px';
+            row.innerHTML = `
+                <input class="form-input" data-name="name" placeholder="Full name" value="${p.name||p.Name||''}" />
+                <input class="form-input" data-name="email" placeholder="Email" value="${p.email||p.Email||''}" />
+                <input class="form-input" data-name="class" placeholder="Class" value="${p.class||p.Class||''}" />
+                <input class="form-input" data-name="phone" placeholder="Phone" value="${p.phone||p.Phone||''}" />
+                <button class="btn btn--tertiary btn-inline-clear">Clear</button>
+            `;
+            row.querySelector('.btn-inline-clear').addEventListener('click', (e) => {
+                e.stopPropagation();
+                ['name','email','class','phone'].forEach(f => row.querySelector(`[data-name="${f}"]`).value = '');
+            });
+            rows.push(row);
+            container.appendChild(row);
+        }
+
+        container.__initialData = JSON.stringify(initialData);
+
+        const actions = document.createElement('div');
+        actions.style.marginTop = '14px';
+        actions.style.display = 'flex';
+        actions.style.gap = '12px';
+        actions.style.justifyContent = 'flex-end';
+
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'btn btn--primary';
+        saveBtn.textContent = 'Save';
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn btn--secondary';
+        cancelBtn.textContent = 'Cancel';
+        actions.appendChild(saveBtn);
+        actions.appendChild(cancelBtn);
+        container.appendChild(actions);
+
+        cancelBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (checkEditorDirty(container)) {
+                const confirmed = await showDiscardModal();
+                if (!confirmed) return;
+            }
+            container.remove(); cardEl.classList.remove('registration-card--open');
+        });
+        saveBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const data = [];
+            for (const r of rows) {
+                const name = r.querySelector('[data-name="name"]').value.trim();
+                const email = r.querySelector('[data-name="email"]').value.trim();
+                const cls = r.querySelector('[data-name="class"]').value.trim();
+                const phone = r.querySelector('[data-name="phone"]').value.trim();
+                if (!name) continue;
+                data.push({ name, email, class: parseInt(cls||0,10) || cls, phone });
+            }
+            try {
+                const resp = await fetch('/api/submit_registrations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ id: eventId, data }) });
+                const json = await resp.json();
+                if (json === true) {
+                    Utils.showToast('Saved', 'success');
+                    await this.refreshData();
+                } else {
+                    Utils.showToast('Save failed', 'error');
+                }
+            } catch (err) { Utils.showToast('Save failed', 'error'); }
+            container.remove(); cardEl.classList.remove('registration-card--open');
+        });
+
+        container.addEventListener('click', (e) => { e.stopPropagation(); });
+
+        cardEl.appendChild(container);
+        cardEl.classList.add('registration-card--open');
+        const firstInput = container.querySelector('input[data-name="name"]');
+        if (firstInput) { setTimeout(() => firstInput.focus(), 60); }
+    }
+
+
     renderRegistrationCard(registration) {
-        const statusClass = `registration-card__status--${registration.status.toLowerCase()}`;
-        const registrationDate = Utils.formatDate(registration.createdAt);
-        
-        return `
-            <div class="registration-card">
-                <div class="registration-card__header">
-                    <h4 class="registration-card__title">${registration.eventName}</h4>
-                    <span class="registration-card__status ${statusClass}">${registration.status}</span>
-                </div>
-                <div class="registration-card__details">
+        const createdRaw = registration.createdAt || registration.created_at || registration.CreatedAt || null;
+        const eventName = registration.eventName || registration.event_name || registration.EventName || registration.Event || 'Unnamed Event';
+        const statusRaw = (registration.status || registration.Status || '').toString().toLowerCase();
+        let status = statusRaw;
+        if (!status) {
+            const members = (registration.teamMembers && registration.teamMembers.length > 0) ? registration.teamMembers : (registration.participants && registration.participants.length > 0 ? registration.participants : []);
+            status = (members && members.length > 0) ? 'confirmed' : 'pending';
+        }
+        const statusClass = (status === 'confirmed') ? 'confirmed' : (status === 'cancelled' ? 'cancelled' : 'pending');
+        const wrapperClass = `registration-card registration-card--${statusClass}`;
+
+        let detailsHtml = '';
+        if (createdRaw) {
+            detailsHtml += `
                     <div class="registration-detail">
                         <span class="registration-detail__label">Registration Date:</span>
-                        <span class="registration-detail__value">${registrationDate}</span>
-                    </div>
+                        <span class="registration-detail__value">${Utils.formatDate(createdRaw)}</span>
+                    </div>`;
+        }
+
+        if (registration.registrationId) {
+            detailsHtml += `
                     <div class="registration-detail">
-                        <span class="registration-detail__label">Team Name:</span>
-                        <span class="registration-detail__value">${registration.teamName || 'Individual'}</span>
-                    </div>
-                    <div class="registration-detail">
-                        <span class="registration-detail__label">Event Mode:</span>
-                        <span class="registration-detail__value">${Utils.formatEventMode(registration.eventMode)}</span>
-                    </div>
-                    ${registration.registrationId ? `
-                        <div class="registration-detail">
-                            <span class="registration-detail__label">Registration ID:</span>
-                            <span class="registration-detail__value">${registration.registrationId}</span>
-                        </div>
-                    ` : ''}
+                        <span class="registration-detail__label">Registration ID:</span>
+                        <span class="registration-detail__value">${registration.registrationId}</span>
+                    </div>`;
+        }
+
+        const eventId = registration.eventId || registration.eventID || registration.EventID || registration.event_id || registration.event || '';
+
+        return `
+            <div class="${wrapperClass}" data-event-id="${escapeHtml(eventId)}">
+                <div class="registration-card__header">
+                    <h4 class="registration-card__title">${eventName}</h4>
+                    <div class="registration-card__status registration-card__status--${statusClass}">${status.toString().toUpperCase()}</div>
                 </div>
-                ${registration.teamMembers && registration.teamMembers.length > 0 ? `
+                <div class="registration-card__details">
+                    ${detailsHtml}
+                </div>
+                ${
+                    (registration.teamMembers && registration.teamMembers.length > 0) || (registration.participants && registration.participants.length > 0) ? `
                     <div class="team-members">
                         <h5 class="team-members__title">Team Members:</h5>
                         <div class="team-members__list">
-                            ${registration.teamMembers.map(member => `
-                                <div class="team-member">${member.name} (${member.email})</div>
-                            `).join('')}
-                        </div>
+                                ${(() => {
+                        const members = (registration.teamMembers && registration.teamMembers.length > 0) ? registration.teamMembers : (registration.participants && registration.participants.length > 0 ? registration.participants : []);
+                        const capacity = registration.capacity || registration.Capacity || 1;
+                        const rendered = [];
+                        for (let i = 0; i < capacity; i++) {
+                            const member = members[i];
+                            if (member) {
+                                rendered.push(`<div class="team-member">${member.name || member.Name || ''} (${member.email || member.Email || ''})</div>`);
+                            } else {
+                                rendered.push(`<div class="team-member">TBD</div>`);
+                            }
+                        }
+                        return rendered.join('');
+                    })()}
+                            </div>
                     </div>
                 ` : ''}
+                <div class="registration-card__actions" style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end;">
+                    <button class="btn btn--secondary btn-view-details" data-event-id="${escapeHtml(eventId)}">View Details</button>
+                    <button class="btn btn--primary btn-register" data-event-id="${escapeHtml(eventId)}">${status === 'confirmed' ? 'Edit Registration' : 'Register'}</button>
+                </div>
             </div>
         `;
     }

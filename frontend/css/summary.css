@@ -94,6 +94,21 @@
     transition: all 0.3s ease;
 }
 
+.registration-card--confirmed {
+    background: linear-gradient(90deg, rgba(34,197,94,0.03), rgba(34,197,94,0.01));
+    border-color: rgba(34,197,94,0.15);
+}
+
+.registration-card--pending {
+    background: rgba(0,0,0,0.02);
+    border-color: rgba(0,0,0,0.06);
+}
+
+.registration-card--cancelled {
+    background: linear-gradient(90deg, rgba(239,68,68,0.03), rgba(239,68,68,0.01));
+    border-color: rgba(239,68,68,0.15);
+}
+
 .registration-card:hover {
     box-shadow: 0 4px 12px rgba(41, 119, 245, 0.15);
 }
@@ -117,6 +132,8 @@
     font-size: 12px;
     font-weight: 500;
     text-transform: uppercase;
+    display: inline-block;
+    margin-left: 12px;
 }
 
 .registration-card__status--confirmed {
@@ -125,8 +142,8 @@
 }
 
 .registration-card__status--pending {
-    background: #fef3c7;
-    color: #92400e;
+    background: #f3f4f6;
+    color: #374151;
 }
 
 .registration-card__status--cancelled {
@@ -182,6 +199,169 @@
     padding: 4px 8px;
     background: rgba(255, 255, 255, 0.8);
     border-radius: 4px;
+}
+
+.registration-card__actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.summary-content .btn {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-family: 'Raleway', sans-serif;
+}
+
+.summary-content .btn--primary {
+    background: var(--exun-blue);
+    color: #fff;
+}
+
+.summary-content .btn--secondary {
+    background: transparent;
+    color: var(--dark-charcoal);
+    border: 1px solid rgba(56,58,60,0.08);
+}
+
+#edit-profile-btn.btn--secondary {
+    background-color: transparent;
+    color: var(--exun-blue);
+    border: 2px solid var(--exun-blue);
+    transition: transform 0.15s cubic-bezier(.17,.67,.83,.67), box-shadow 0.15s cubic-bezier(.17,.67,.83,.67);
+    border-radius: 12px;
+    padding: 10px 16px;
+}
+#edit-profile-btn.btn--secondary:hover {
+    transform: scale(1.06);
+    box-shadow: 0 6px 18px rgba(41, 119, 245, 0.18);
+    background-color: var(--exun-blue);
+    color: var(--white);
+}
+#edit-profile-btn.btn--secondary:active {
+    transform: scale(0.97);
+    box-shadow: 0 2px 6px rgba(41, 119, 245, 0.12);
+}
+
+.summary-content .btn--primary {
+    border-radius: 12px;
+    padding: 10px 16px;
+    box-shadow: 0 6px 14px rgba(41,119,245,0.12);
+}
+
+.summary-content .btn--secondary {
+    border-radius: 10px;
+    padding: 8px 14px;
+}
+
+.summary-content .btn--tertiary {
+    background: #f6f6f6;
+    border: 1px solid rgba(0,0,0,0.06);
+    color: #111827;
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-weight: 700;
+}
+
+.inline-registration-editor {
+    background: transparent;
+    animation: summaryInlineOpen 220ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+.summary-inline-animate {
+    transform-origin: top center;
+}
+
+@keyframes summaryInlineOpen {
+    from { opacity: 0; transform: translateY(-6px) scaleY(0.98); }
+    to { opacity: 1; transform: translateY(0) scaleY(1); }
+}
+
+.inline-member-row .form-input {
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+    border-radius: 12px;
+    padding: 12px 14px;
+    height: 44px;
+    font-size: 15px;
+    color: #111827;
+    font-family: 'Raleway', sans-serif;
+    transition: box-shadow 160ms ease, border-color 160ms ease, transform 120ms ease;
+}
+
+.summary-content .form-input {
+    background: #fff;
+    border: 1px solid rgba(15,23,42,0.06);
+    border-radius: 12px;
+    padding: 12px 14px;
+    height: 44px;
+    font-size: 15px;
+    color: #0f172a;
+    font-family: 'Raleway', sans-serif;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+}
+
+.summary-content .form-input::placeholder {
+    color: #9ca3af;
+    opacity: 1;
+}
+
+.summary-content .form-input:focus {
+    outline: none;
+    border-color: #2977f5;
+    box-shadow: 0 8px 20px rgba(41,119,245,0.08);
+    transform: translateY(-1px);
+}
+
+.inline-registration-editor .btn--primary {
+    background: #2977f5;
+    color: #fff;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-family: 'Raleway', sans-serif;
+}
+
+.inline-registration-editor .btn--secondary {
+    background: rgba(0,0,0,0.04);
+    color: #111827;
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-family: 'Raleway', sans-serif;
+}
+
+.inline-registration-editor .btn--tertiary,
+.inline-member-row .btn--tertiary,
+.btn-inline-clear {
+    background: #ffffff;
+    border: 1px solid rgba(15,23,42,0.06);
+    color: #0f172a;
+    font-weight: 800;
+    padding: 10px 14px;
+    border-radius: 12px;
+    min-width: 84px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 2px rgba(2,6,23,0.04);
+    font-family: 'Raleway', sans-serif;
+}
+
+.inline-registration-editor .btn--tertiary:hover,
+.inline-member-row .btn--tertiary:hover,
+.btn-inline-clear:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(41,119,245,0.04);
+}
+
+.registration-card--open {
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    border-radius: 10px;
 }
 
 .empty-state {

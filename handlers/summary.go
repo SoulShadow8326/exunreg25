@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"exunreg25/db"
 	"net/http"
-	"strings"
 )
 
 type SummaryResponse struct {
@@ -18,6 +17,8 @@ type EventSummary struct {
 	EventName    string           `json:"event_name"`
 	Participants []db.Participant `json:"participants"`
 	TotalCount   int              `json:"total_count"`
+	Status       string           `json:"status"`
+	Capacity     int              `json:"capacity"`
 }
 
 func GetUserSummary(w http.ResponseWriter, r *http.Request) {
@@ -72,40 +73,42 @@ func GetUserSummary(w http.ResponseWriter, r *http.Request) {
 		user.Registrations = make(map[string][]db.Participant)
 	}
 
-	totalRegistrations := len(user.Registrations)
 	eventSummaries := []EventSummary{}
 	totalParticipants := 0
 	pendingCount := 0
+	totalRegistrations := 0
 
-	for eventID, participants := range user.Registrations {
-		if len(participants) == 0 {
-			continue
-		}
-
-		eventData, err := globalDB.Get("events", eventID)
-		if err != nil {
-			continue
-		}
-
-		event := eventData.(*db.Event)
-		eventSummary := EventSummary{
-			EventID:      eventID,
-			EventName:    event.Name,
-			Participants: participants,
-			TotalCount:   len(participants),
-		}
-
-		eventSummaries = append(eventSummaries, eventSummary)
-		totalParticipants += len(participants)
-	}
-
-	regs, rerr := globalDB.GetAll("registrations")
-	if rerr == nil {
-		for _, rd := range regs {
-			if reg, ok := rd.(*db.Registration); ok {
-				if reg.UserID == user.ID && strings.ToLower(reg.Status) == "pending" {
-					pendingCount++
+	eventsRaw, err := globalDB.GetAll("events")
+	totalEvents := 0
+	if err == nil {
+		for _, evd := range eventsRaw {
+			if ev, ok := evd.(*db.Event); ok {
+				totalEvents++
+				eventID := ev.ID
+				parts := []db.Participant{}
+				if user.Registrations != nil {
+					if p, ok := user.Registrations[eventID]; ok {
+						parts = p
+					}
 				}
+				status := "confirmed"
+				if len(parts) == 0 {
+					status = "pending"
+					pendingCount++
+				} else {
+					totalParticipants += len(parts)
+					totalRegistrations++
+				}
+
+				eventSummary := EventSummary{
+					EventID:      eventID,
+					EventName:    ev.Name,
+					Participants: parts,
+					TotalCount:   len(parts),
+					Status:       status,
+					Capacity:     ev.Participants,
+				}
+				eventSummaries = append(eventSummaries, eventSummary)
 			}
 		}
 	}

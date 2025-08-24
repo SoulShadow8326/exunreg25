@@ -69,10 +69,12 @@
                                 <span class="event-info-label">Dates:</span>
                                 <span class="event-info-value">{{if .Event.Dates}}{{.Event.Dates}}{{else}}TBA{{end}}</span>
                             </div>
+                            {{if .Event.Individual}}
                             <div class="event-info-item">
-                                <span class="event-info-label">Registration:</span>
-                                <span class="event-info-value">{{if .Event.Individual}}Individual{{else}}Team{{end}}</span>
+                                <span class="event-info-label">Individual registration:</span>
+                                <span class="event-info-value">True</span>
                             </div>
+                            {{end}}
                         </div>
                     </div>
                     
@@ -90,33 +92,9 @@
         </div>
     </main>
     {{template "footer" .}}
-    
-    <script src="/js/api.js"></script>
-    <script src="/js/utils.js"></script>
-    <script src="/js/navigation.js"></script>
-    <script>
-        document.getElementById('register-event-btn').addEventListener('click', async function() {
-            if (!ExunServices.api.isAuthenticated()) {
-                window.location.href = '/login';
-                return;
-            }
-            try {
-                const response = await ExunServices.api.apiRequest('/submit_registrations', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        id: '{{.Event.ID}}',
-                        data: [{ name: 'User Name', email: 'user@example.com', class: 10, phone: '1234567890' }]
-                    })
-                });
-                if (response.status === 'success') {
-                    alert('Registration successful!');
-                } else {
-                    alert('Registration failed: ' + response.error);
-                }
-            } catch (error) {
-                alert('Registration failed: ' + error.message);
-            }
-        });
-    </script>
+        <script src="/js/api.js"></script>
+        <script src="/js/utils.js"></script>
+        <script src="/js/navigation.js"></script>
+        <script src="/js/event-detail.js"></script>
 </body>
 </html>

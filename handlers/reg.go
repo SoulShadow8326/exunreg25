@@ -42,57 +42,51 @@ func SubmitRegistrations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !globalAuthHandler.isAuthenticated(r) {
-		response := Response{
-			Status: "error",
-			Error:  "Authentication required",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(response)
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
 	email := globalAuthHandler.getAuthenticatedUser(r)
 	userData, err := globalDB.Get("users", email)
-	if err != nil {
-		response := Response{
-			Status: "error",
-			Error:  "User not found",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(response)
+	if err != nil || userData == nil {
+		http.Redirect(w, r, "/complete_signup", http.StatusSeeOther)
 		return
 	}
 
 	user := userData.(*db.User)
-	if user.Username == "" {
-		response := Response{
-			Status: "error",
-			Error:  "Complete signup required",
-		}
+
+	var raw map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusForbidden)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(false)
 		return
 	}
 
-	var req RegistrationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		response := Response{
-			Status: "error",
-			Error:  "Invalid request format",
-		}
+	idVal, ok := raw["id"]
+	if !ok {
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(false)
+		return
+	}
+	reqEventID := fmt.Sprintf("%v", idVal)
+
+	dataVal, ok := raw["data"]
+	if !ok {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(false)
+		return
+	}
+	dataArr, ok := dataVal.([]interface{})
+	if !ok {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(false)
 		return
 	}
 
-	eventData, err := globalDB.Get("events", req.EventID)
+	eventData, err := globalDB.Get("events", reqEventID)
 	var event *db.Event
 	if err != nil {
-		evt, jerr := loadEventFromJSON(req.EventID)
+		evt, jerr := loadEventFromJSON(reqEventID)
 		if jerr != nil || evt == nil {
 			response := Response{
 				Status: "error",
@@ -111,56 +105,128 @@ func SubmitRegistrations(w http.ResponseWriter, r *http.Request) {
 			event = ev
 		}
 	}
-	if !event.IndependentRegistration && user.Username != "" {
-		response := Response{
-			Status: "error",
-			Error:  "Individual registration not allowed for this event",
-		}
+	if !event.IndependentRegistration && user.Individual {
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusForbidden)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(false)
 		return
 	}
-	if err := validateParticipants(req.Data, event); err != nil {
-		response := Response{
-			Status: "error",
-			Error:  err.Error(),
-		}
+
+	if len(dataArr) == 0 {
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(false)
 		return
+	}
+	if len(dataArr) > event.Participants {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(false)
+		return
+	}
+
+	var minClass, maxClass int
+	if event.OpenToAll {
+		minClass = 1
+		maxClass = 12
+	} else {
+		var eligibility []int
+		if err := json.Unmarshal([]byte(event.Eligibility), &eligibility); err == nil && len(eligibility) == 2 {
+			minClass = eligibility[0]
+			maxClass = eligibility[1]
+		} else {
+			re := regexp.MustCompile(`(\d{1,2}).*?(\d{1,2})`)
+			m := re.FindStringSubmatch(event.Eligibility)
+			if len(m) >= 3 {
+				minClass, _ = strconv.Atoi(m[1])
+				maxClass, _ = strconv.Atoi(m[2])
+			} else {
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(false)
+				return
+			}
+		}
+	}
+
+	participants := make([]db.Participant, 0, len(dataArr))
+	for _, item := range dataArr {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(false)
+			return
+		}
+		name := strings.TrimSpace(strings.ToUpper(fmt.Sprintf("%v", m["name"])))
+		if name == "" {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(false)
+			return
+		}
+		emailVal := fmt.Sprintf("%v", m["email"])
+		if !validateEmailFormat(emailVal) {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(false)
+			return
+		}
+		var classInt int
+		switch cv := m["class"].(type) {
+		case float64:
+			classInt = int(cv)
+		case string:
+			ci, err := strconv.Atoi(strings.TrimSpace(cv))
+			if err != nil {
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(false)
+				return
+			}
+			classInt = ci
+		default:
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(false)
+			return
+		}
+		if classInt < 6 || classInt > 12 {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(false)
+			return
+		}
+		if classInt < minClass || classInt > maxClass {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(false)
+			return
+		}
+		phoneVal := fmt.Sprintf("%v", m["phone"])
+		phoneDigits := strings.TrimSpace(phoneVal)
+		if len(phoneDigits) != 10 {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(false)
+			return
+		}
+		if _, err := strconv.Atoi(phoneDigits); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(false)
+			return
+		}
+
+		participants = append(participants, db.Participant{
+			Name:  name,
+			Email: emailVal,
+			Class: classInt,
+			Phone: phoneDigits,
+		})
 	}
 
 	if user.Registrations == nil {
 		user.Registrations = make(map[string][]db.Participant)
 	}
 
-	participants := make([]db.Participant, len(req.Data))
-	for i, p := range req.Data {
-		participants[i] = db.Participant{
-			Name:  p.Name,
-			Email: p.Email,
-			Class: p.Class,
-			Phone: p.Phone,
-		}
-	}
-
-	user.Registrations[req.EventID] = participants
+	user.Registrations[reqEventID] = participants
 
 	if err := globalDB.Update("users", email, user); err != nil {
-		response := Response{
-			Status: "error",
-			Error:  "Failed to update user registrations",
-		}
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(false)
 		return
 	}
 
 	registration := &db.Registration{
-		EventID:   req.EventID,
+		EventID:   reqEventID,
 		UserID:    user.ID,
 		TeamName:  "",
 		Status:    "pending",
@@ -168,23 +234,12 @@ func SubmitRegistrations(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt: time.Now(),
 	}
 	if err := globalDB.Create("registrations", registration); err != nil {
-		response := Response{
-			Status: "error",
-			Error:  "Failed to create registration",
-		}
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
+		json.NewEncoder(w).Encode(false)
 		return
 	}
-	response := Response{
-		Status:  "success",
-		Message: "Registration submitted successfully",
-		Data:    registration,
-	}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(true)
 }
 
 func validateParticipants(participants []Participant, event *db.Event) error {
@@ -213,16 +268,30 @@ func validateParticipant(participant Participant, event *db.Event) error {
 	if participant.Class < 1 || participant.Class > 12 {
 		return fmt.Errorf("class must be between 1 and 12")
 	}
-	var eligibility []int
-	if err := json.Unmarshal([]byte(event.Eligibility), &eligibility); err != nil {
-		return fmt.Errorf("invalid event eligibility format")
-	}
-	if len(eligibility) != 2 {
-		return fmt.Errorf("invalid event eligibility format")
+	var minClass, maxClass int
+	if event.OpenToAll {
+		minClass = 1
+		maxClass = 12
+	} else {
+		var eligibility []int
+		if err := json.Unmarshal([]byte(event.Eligibility), &eligibility); err == nil && len(eligibility) == 2 {
+			minClass = eligibility[0]
+			maxClass = eligibility[1]
+		} else {
+			re := regexp.MustCompile(`(\d{1,2}).*?(\d{1,2})`)
+			m := re.FindStringSubmatch(event.Eligibility)
+			if len(m) >= 3 {
+				minClass, _ = strconv.Atoi(m[1])
+				maxClass, _ = strconv.Atoi(m[2])
+			} else {
+				return fmt.Errorf("invalid event eligibility format")
+			}
+		}
 	}
 
-	minClass := eligibility[0]
-	maxClass := eligibility[1]
+	if participant.Class < minClass || participant.Class > maxClass {
+		return fmt.Errorf("class %d is not eligible for this event (eligible: %d-%d)", participant.Class, minClass, maxClass)
+	}
 	if participant.Class < minClass || participant.Class > maxClass {
 		return fmt.Errorf("class %d is not eligible for this event (eligible: %d-%d)", participant.Class, minClass, maxClass)
 	}

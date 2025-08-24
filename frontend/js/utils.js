@@ -10,7 +10,11 @@ async function loadComponent(componentPath, targetElement) {
         const response = await fetch(componentPath);
         const html = await response.text();
         if (targetElement) {
-            targetElement.innerHTML = html;
+            if (targetElement === document.body) {
+                document.body.insertAdjacentHTML('beforeend', html);
+            } else {
+                targetElement.innerHTML = html;
+            }
         }
         return html;
     } catch (error) {

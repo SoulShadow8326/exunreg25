@@ -78,6 +78,36 @@ a:hover {
     transition: all 0.3s ease;
     text-decoration: none;
     font-size: 14px;
+    font-family: 'Raleway', sans-serif;
+}
+
+.filter-btn {
+    display: inline-block;
+    padding: 8px 14px;
+    border: 2px solid rgba(15,23,42,0.06);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--dark-charcoal);
+    cursor: pointer;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background-color 0.18s ease, transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.filter-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(41,119,245,0.06);
+}
+
+.filter-btn--active {
+    background: var(--exun-blue);
+    color: var(--white);
+    border-color: var(--exun-blue);
+}
+
+@media (max-width: 480px) {
+    .filter-btn { padding: 6px 10px; font-size: 13px; }
 }
 
 .btn--primary {
@@ -221,4 +251,12 @@ input[type=number] {
     .text-3xl { font-size: 24px; }
     .text-4xl { font-size: 24px; }
     .text-5xl { font-size: 28px; }
+}
+
+.btn-view-details:hover {
+    transform: scale(1.02) !important;
+    box-shadow: 0 4px 12px rgba(41, 119, 245, 0.08) !important;
+}
+.btn-view-details:active {
+    transform: scale(0.98) !important;
 }

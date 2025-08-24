@@ -4,6 +4,10 @@ class AdminPage {
         this.stats = {};
         this.events = [];
         this.users = [];
+    this._tabListenersAttached = false;
+    this._modalListenersAttached = false;
+    this._createEventBtnAttached = false;
+    this._importBtnAttached = false;
         this.init();
     }
 
@@ -27,7 +31,7 @@ class AdminPage {
     async loadData() {
         try {
             const response = await ExunServices.api.apiRequest('/admin/stats');
-            this.stats = response.data || {};
+            this.stats = response && (response.data || response) || {};
             this.renderStats();
             return;
         } catch (error) {
@@ -37,22 +41,26 @@ class AdminPage {
     }
 
     setupEventListeners() {
-        const tabs = document.querySelectorAll('.admin-tab');
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                this.switchTab(tab.dataset.tab);
+        if (!this._tabListenersAttached) {
+            const tabs = document.querySelectorAll('.admin-tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    this.switchTab(tab.dataset.tab);
+                });
             });
-        });
+            this._tabListenersAttached = true;
+        }
 
         const createEventBtn = document.getElementById('create-event-btn');
-        if (createEventBtn) {
+        if (createEventBtn && !this._createEventBtnAttached) {
             createEventBtn.addEventListener('click', () => {
                 this.showCreateEventModal();
             });
+            this._createEventBtnAttached = true;
         }
 
         const importBtn = document.getElementById('import-events-btn');
-        if (importBtn) {
+        if (importBtn && !this._importBtnAttached) {
             importBtn.addEventListener('click', async () => {
                 importBtn.disabled = true;
                 try {
@@ -70,15 +78,18 @@ class AdminPage {
                     importBtn.disabled = false;
                 }
             });
+            this._importBtnAttached = true;
         }
 
         this.setupModalEventListeners();
     }
 
     setupModalEventListeners() {
+        if (this._modalListenersAttached) return;
+
         const modal = document.getElementById('admin-modal');
         const closeBtn = document.getElementById('modal-close');
-        
+
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
                 this.closeModal();
@@ -98,6 +109,8 @@ class AdminPage {
                 this.closeModal();
             }
         });
+
+        this._modalListenersAttached = true;
     }
 
     switchTab(tabName) {
@@ -138,10 +151,10 @@ class AdminPage {
 
     renderStats() {
         const statsElements = {
-            'total-events': this.stats.totalEvents || 0,
-            'total-users': this.stats.totalUsers || 0,
-            'total-registrations': this.stats.totalRegistrations || 0,
-            'active-events': this.stats.activeEvents || 0
+            'total-events': this.stats.totalEvents || this.stats.total_events || 0,
+            'total-users': this.stats.totalUsers || this.stats.total_users || 0,
+            'total-registrations': this.stats.totalRegistrations || this.stats.total_registrations || 0,
+            'active-events': this.stats.activeEvents || this.stats.active_events || this.stats.totalEvents || this.stats.total_events || 0
         };
 
         Object.entries(statsElements).forEach(([id, value]) => {
@@ -225,9 +238,6 @@ class AdminPage {
                                                 <button class="btn btn--secondary" onclick="adminPage.editEvent('${event.id}')">
                                                     Edit
                                                 </button>
-                                                <button class="btn btn--secondary" onclick="adminPage.viewEventRegistrations('${event.id}')">
-                                                    View Registrations
-                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -280,14 +290,26 @@ class AdminPage {
         try {
             const response = await ExunServices.admin.getUserDetails(search);
             this.users = response.users || [];
-            this.renderUsersTable();
+            await this.renderUsersTable();
         } catch (error) {
             console.error('Failed to load users:', error);
             Utils.showToast('Failed to load users', 'error');
         }
     }
+    async _ensureAdminEmails() {
+        if (window.__ADMIN_EMAILS && Array.isArray(window.__ADMIN_EMAILS)) return;
+        try {
+            const resp = await ExunServices.api.apiRequest('/admin/config');
+            const data = resp && (resp.data || resp) || {};
+            const admins = data.admin_emails || data.admin_emails || '';
+            window.__ADMIN_EMAILS = (admins || '').split(',').map(s => s.trim().toLowerCase());
+        } catch (e) {
+            window.__ADMIN_EMAILS = ['exun@dpsrkp.net'];
+        }
+    }
 
-    renderUsersTable() {
+    async renderUsersTable() {
+        await this._ensureAdminEmails();
         const container = document.getElementById('users-table-container');
         if (!container) return;
 
@@ -311,9 +333,17 @@ class AdminPage {
 
             const id = user.id || user.ID || user.email || email;
 
+            let displayName = Utils.escapeHtml(name);
+            try {
+                const adminList = window.__ADMIN_EMAILS || [];
+                if (email && adminList.indexOf(email.toLowerCase()) !== -1) {
+                    displayName = `<span style="color:#2977f5">${displayName}</span>`;
+                }
+            } catch (e) {}
+
             return `
                 <tr>
-                    <td>${Utils.escapeHtml(name)}</td>
+                    <td>${displayName}</td>
                     <td>${Utils.escapeHtml(email)}</td>
                     <td>${Utils.escapeHtml(school)}</td>
                     <td>${regCount}</td>
@@ -363,20 +393,27 @@ class AdminPage {
                         </tr>
                     </thead>
                     <tbody>
-                        ${registrations.map(reg => `
+                        ${registrations.map(reg => {
+                            const members = Array.isArray(reg.members) ? reg.members : [];
+                            const memberNames = members.length ? members.map(m => (m.name || m.Name || m.Name)).join(', ') : '';
+                            const createdRaw = reg.createdAt ? new Date(reg.createdAt) : (reg.createdAt instanceof Date ? reg.createdAt : null);
+                            const createdStr = createdRaw ? Utils.formatDate(createdRaw) : (reg.createdAt ? Utils.formatDate(reg.createdAt) : 'N/A');
+                            const team = reg.teamName || reg.TeamName || (members.length ? 'Team' : 'Individual');
+                            const status = (reg.status || reg.Status || 'pending').toString();
+                            return `
                             <tr>
-                                <td>${reg.eventName}</td>
-                                <td>${reg.userEmail}</td>
-                                <td>${reg.teamName || 'Individual'}</td>
-                                <td>${reg.memberCount || 1}</td>
-                                <td>${Utils.formatDate(reg.createdAt)}</td>
+                                <td>${Utils.escapeHtml(reg.eventName || reg.eventName || '')}</td>
+                                <td>${Utils.escapeHtml(reg.userEmail || reg.userEmail || '')}</td>
+                                <td>${Utils.escapeHtml(team)}</td>
+                                <td>${members.length || (reg.memberCount || 1)}</td>
+                                <td>${Utils.escapeHtml(createdStr)}</td>
                                 <td>
-                                    <span class="badge badge--${reg.status.toLowerCase()}">
-                                        ${reg.status}
+                                    <span class="badge badge--${Utils.escapeHtml(status.toLowerCase())}">
+                                        ${Utils.escapeHtml(status)}
                                     </span>
                                 </td>
                             </tr>
-                        `).join('')}
+                        `}).join('')}
                     </tbody>
                 </table>
             `;

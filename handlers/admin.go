@@ -101,21 +101,38 @@ func (ah *AdminHandler) GetAdminStats(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-
-	users, err := ah.db.GetAll("users")
+	stats, err := GetAdminStatsData()
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
 
-	events, err := ah.db.GetAll("events")
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(stats)
+}
+
+func GetAdminStatsData() (AdminStats, error) {
+	users, err := globalDB.GetAll("users")
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
+		return AdminStats{}, err
+	}
+
+	events, err := globalDB.GetAll("events")
+	if err != nil {
+		return AdminStats{}, err
+	}
+
+	var nonAdminUsers []interface{}
+	for _, u := range users {
+		user := u.(*db.User)
+		if IsAdminEmail(user.Email) {
+			continue
+		}
+		nonAdminUsers = append(nonAdminUsers, u)
 	}
 
 	stats := AdminStats{
-		TotalUsers:         len(users),
+		TotalUsers:         len(nonAdminUsers),
 		TotalEvents:        len(events),
 		TotalRegistrations: 0,
 		EventStats:         make(map[string]EventStats),
@@ -132,19 +149,19 @@ func (ah *AdminHandler) GetAdminStats(w http.ResponseWriter, r *http.Request) {
 			Eligibility:       event.Eligibility,
 		}
 
-		for _, userData := range users {
+		for _, userData := range nonAdminUsers {
 			user := userData.(*db.User)
 			if participants, exists := user.Registrations[event.ID]; exists {
 				eventStats.TotalParticipants += len(participants)
 				eventStats.TotalTeams++
-				stats.TotalRegistrations += len(participants)
+				stats.TotalRegistrations++
 			}
 		}
 
 		stats.EventStats[event.ID] = eventStats
 	}
 
-	for _, userData := range users {
+	for _, userData := range nonAdminUsers {
 		user := userData.(*db.User)
 		userStats := UserStats{
 			Email:             user.Email,
@@ -161,8 +178,7 @@ func (ah *AdminHandler) GetAdminStats(w http.ResponseWriter, r *http.Request) {
 		stats.UserRegistrations[user.Email] = userStats
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(stats)
+	return stats, nil
 }
 
 func (ah *AdminHandler) GetEvent(w http.ResponseWriter, r *http.Request) {
@@ -394,34 +410,80 @@ func (ah *AdminHandler) GetEventRegistrations(w http.ResponseWriter, r *http.Req
 	}
 
 	eventID := r.URL.Query().Get("event_id")
-	if eventID == "" {
-		http.Error(w, "Event ID parameter required", http.StatusBadRequest)
+
+	usersRaw, err := ah.db.GetAll("users")
+	if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
+	usersByID := make(map[int]db.User)
+	for _, u := range usersRaw {
+		if usr, ok := u.(db.User); ok {
+			usersByID[usr.ID] = usr
+		}
+	}
 
-	users, err := ah.db.GetAll("users")
+	regsRaw, err := ah.db.GetAll("registrations")
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
 
-	var registrations []map[string]interface{}
-	for _, userData := range users {
-		user := userData.(db.User)
-		if participants, exists := user.Registrations[eventID]; exists {
-			for _, participant := range participants {
-				registrations = append(registrations, map[string]interface{}{
-					"user_email":  user.Email,
-					"user_name":   user.Fullname,
-					"institution": user.InstitutionName,
-					"participant": participant,
-				})
-			}
+	eventsRaw, _ := ah.db.GetAll("events")
+	eventsByID := make(map[string]db.Event)
+	for _, ev := range eventsRaw {
+		if e, ok := ev.(db.Event); ok {
+			eventsByID[e.ID] = e
 		}
 	}
 
+	var out []map[string]interface{}
+	for _, rr := range regsRaw {
+		reg, ok := rr.(*db.Registration)
+		if !ok {
+			continue
+		}
+		if eventID != "" && reg.EventID != eventID {
+			continue
+		}
+
+		user := usersByID[reg.UserID]
+
+		userEmail := user.Email
+		userName := user.Fullname
+		teamName := reg.TeamName
+		status := reg.Status
+		created := reg.CreatedAt
+
+		members := []db.Participant{}
+		memberCount := 0
+		if user.Registrations != nil {
+			if parts, ok := user.Registrations[reg.EventID]; ok {
+				members = parts
+				memberCount = len(parts)
+			}
+		}
+
+		eventName := ""
+		if ev, ok := eventsByID[reg.EventID]; ok {
+			eventName = ev.Name
+		}
+
+		out = append(out, map[string]interface{}{
+			"eventId":     reg.EventID,
+			"eventName":   eventName,
+			"userEmail":   userEmail,
+			"userName":    userName,
+			"teamName":    teamName,
+			"members":     members,
+			"memberCount": memberCount,
+			"createdAt":   created,
+			"status":      status,
+		})
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(registrations)
+	json.NewEncoder(w).Encode(out)
 }
 
 func (ah *AdminHandler) ExportData(w http.ResponseWriter, r *http.Request) {

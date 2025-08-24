@@ -82,16 +82,6 @@ func CompleteSignupPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := userData.(*db.User)
-	if isProfileComplete(user) {
-		response := Response{
-			Status: "error",
-			Error:  "Signup already completed",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusForbidden)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
 
 	response := Response{
 		Status:  "success",
@@ -106,6 +96,15 @@ func CompleteSignupPage(w http.ResponseWriter, r *http.Request) {
 				"institution_name",
 				"address",
 				"principals_name",
+			},
+			"values": map[string]interface{}{
+				"fullname":         user.Fullname,
+				"phone_number":     user.PhoneNumber,
+				"principals_email": user.PrincipalsEmail,
+				"individual":       user.Individual,
+				"institution_name": user.InstitutionName,
+				"address":          user.Address,
+				"principals_name":  user.PrincipalsName,
 			},
 		},
 	}
@@ -151,16 +150,6 @@ func CompleteSignupAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := userData.(*db.User)
-	if isProfileComplete(user) {
-		response := Response{
-			Status: "error",
-			Error:  "Signup already completed",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusForbidden)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
 
 	var req CompleteSignupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -430,20 +419,4 @@ func getUserRegistrations(userID int) (map[string]interface{}, error) {
 	}
 
 	return userRegistrations, nil
-}
-
-func isProfileComplete(user *db.User) bool {
-	if user == nil {
-		return false
-	}
-	if strings.TrimSpace(user.Fullname) == "" {
-		return false
-	}
-	if strings.TrimSpace(user.PhoneNumber) == "" {
-		return false
-	}
-	if strings.TrimSpace(user.InstitutionName) == "" {
-		return false
-	}
-	return true
 }
