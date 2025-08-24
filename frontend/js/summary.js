@@ -390,9 +390,24 @@ class SummaryPage {
                 <button class="btn btn--tertiary btn-inline-clear"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-delete-icon lucide-delete"><path d="M10 5a2 2 0 0 0-1.344.519l-6.328 5.74a1 1 0 0 0 0 1.481l6.328 5.741A2 2 0 0 0 10 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/><path d="m12 9 6 6"/><path d="m18 9-6 6"/></svg></button>
             `;
             const clearBtn = row.querySelector('.btn-inline-clear');
-            clearBtn.addEventListener('click', (e) => {
+            clearBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 if (rows.length <= 1) {
+                    const confirmed = await showDiscardModal('This will delete your registration for this event. Continue?');
+                    if (!confirmed) return;
+                    try {
+                        const resp = await fetch('/api/submit_registrations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ id: eventId, data: [] }) });
+                        let json = null;
+                        try { json = await resp.json(); } catch(e) { json = null; }
+                        if (resp.ok && (json === true || (json && json.status === 'success'))) {
+                            Utils.showToast('Registration deleted', 'success');
+                            await this.refreshData();
+                        } else {
+                            const serverMsg = (json && (json.error || json.message || json.msg)) ? (json.error || json.message || json.msg) : null;
+                            if (serverMsg) Utils.showToast(serverMsg.toString(), 'error');
+                            else Utils.showToast('Delete failed', 'error');
+                        }
+                    } catch (err) { Utils.showToast((err && err.message) ? err.message : 'Delete failed', 'error'); }
                     closeEditorSafely();
                     return;
                 }
@@ -499,14 +514,20 @@ class SummaryPage {
             }
             try {
                 const resp = await fetch('/api/submit_registrations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ id: eventId, data }) });
-                const json = await resp.json();
-                if (json === true) {
+                let json = null;
+                try { json = await resp.json(); } catch(e) { json = null; }
+                if (resp.ok && (json === true || (json && json.status === 'success'))) {
                     Utils.showToast('Saved', 'success');
                     await this.refreshData();
                 } else {
-                    Utils.showToast('Save failed', 'error');
+                    const serverMsg = (json && (json.error || json.message || json.msg)) ? (json.error || json.message || json.msg) : null;
+                    if (serverMsg) Utils.showToast(serverMsg.toString(), 'error');
+                    else Utils.showToast('Save failed', 'error');
                 }
-            } catch (err) { Utils.showToast('Save failed', 'error'); }
+            } catch (err) {
+                const msg = (err && err.message) ? err.message : 'Save failed';
+                Utils.showToast(msg, 'error');
+            }
             container.remove(); cardEl.classList.remove('registration-card--open');
         });
 

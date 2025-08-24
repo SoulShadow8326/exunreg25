@@ -112,8 +112,25 @@ func SubmitRegistrations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(dataArr) == 0 {
+		if user.Registrations != nil {
+			delete(user.Registrations, reqEventID)
+		}
+		if err := globalDB.Update("users", email, user); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(false)
+			return
+		}
+		if regs, err := globalDB.GetAll("registrations"); err == nil {
+			for _, rr := range regs {
+				if r, ok := rr.(*db.Registration); ok {
+					if r.EventID == reqEventID && r.UserID == user.ID {
+						_ = globalDB.Delete("registrations", strconv.Itoa(r.ID))
+					}
+				}
+			}
+		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(false)
+		json.NewEncoder(w).Encode(true)
 		return
 	}
 	if len(dataArr) > event.Participants {

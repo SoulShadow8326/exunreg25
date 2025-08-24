@@ -375,11 +375,14 @@ class EventDetailPage {
                 Utils.showToast('Registration saved', 'success');
                 setTimeout(() => { cleanup(); window.location.href = '/events'; }, 1200);
             } else {
-                Utils.showToast('Save failed', 'error');
+                const serverMsg = (json && (json.error || json.message || json.msg)) ? (json.error || json.message || json.msg) : null;
+                if (serverMsg) Utils.showToast(serverMsg.toString(), 'error');
+                else Utils.showToast('Save failed', 'error');
             }
         } catch (err) {
             console.error('Save failed', err);
-            Utils.showToast('Save failed', 'error');
+            const msg = (err && err.message) ? err.message : 'Save failed';
+            Utils.showToast(msg, 'error');
         }
     });
 
