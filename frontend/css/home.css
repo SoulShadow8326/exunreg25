@@ -86,6 +86,7 @@
     justify-content: center;
     flex-wrap: wrap;
     gap: 32px;
+    margin-bottom: 24px;
 }
 
 @media (max-width: 1024px) {

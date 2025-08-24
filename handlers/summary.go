@@ -76,7 +76,6 @@ func GetUserSummary(w http.ResponseWriter, r *http.Request) {
 	eventSummaries := []EventSummary{}
 	totalParticipants := 0
 	pendingCount := 0
-	teamEvents := 0
 
 	for eventID, participants := range user.Registrations {
 		if len(participants) == 0 {
@@ -98,9 +97,6 @@ func GetUserSummary(w http.ResponseWriter, r *http.Request) {
 
 		eventSummaries = append(eventSummaries, eventSummary)
 		totalParticipants += len(participants)
-		if !event.IndependentRegistration {
-			teamEvents++
-		}
 	}
 
 	regs, rerr := globalDB.GetAll("registrations")
@@ -118,7 +114,6 @@ func GetUserSummary(w http.ResponseWriter, r *http.Request) {
 		"total_events_registered": totalRegistrations,
 		"total_participants":      totalParticipants,
 		"pending_registrations":   pendingCount,
-		"team_events":             teamEvents,
 		"events":                  eventSummaries,
 		"user_info": map[string]interface{}{
 			"fullname":         user.Fullname,

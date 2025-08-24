@@ -177,3 +177,9 @@ function formatEligibility(eligibility, openToAll) {
     }
     return 'All Classes';
 }
+
+function escapeHtml(str) {
+    return sanitizeHTML(String(str || ''));
+}
+
+window.Utils.escapeHtml = escapeHtml;

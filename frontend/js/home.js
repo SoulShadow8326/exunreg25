@@ -16,22 +16,7 @@ class HomePage {
             this.events = response.data || [];
         } catch (error) {
             console.error('Failed to load events from API:', error);
-            Utils.showToast('Loading events from backup...', 'info');
-            try {
-                    const localResponse = await fetch('/data/events.json');
-                const json = await localResponse.json();
-                this.events = Object.entries(json.events).map(([name, image]) => ({
-                    id: name.replace(/\s+/g, '-').toLowerCase(),
-                    name,
-                    image: image ? `/illustrations/${image.split('/').pop()}` : '/assets/exun_base.webp',
-                    ...json.default,
-                    description_short: json.descriptions[name]?.short || '',
-                    description_long: json.descriptions[name]?.long || ''
-                }));
-            } catch (jsonError) {
-                console.error('Failed to load events from events.json:', jsonError);
-                Utils.showToast('Failed to load events', 'error');
-            }
+            Utils.showToast('Failed to load events', 'error');
         }
     }
 
@@ -56,7 +41,7 @@ class HomePage {
             this.navigateToEvent(event.id);
         };
 
-    const imageUrl = event.image ? `/illustrations/${event.image.split('/').pop()}` : '/assets/exun_base.webp';
+    const imageUrl = event.image ? (event.image.toString().startsWith('/') ? event.image : `/illustrations/${event.image.toString().split('/').pop()}`) : '/assets/exun_base.webp';
         const eligibilityText = formatEligibility(event.eligibility, event.open_to_all);
         const participantsText = formatParticipants(event.participants);
         const modeText = formatEventMode(event.mode);

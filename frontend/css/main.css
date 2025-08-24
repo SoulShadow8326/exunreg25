@@ -5,7 +5,14 @@
     font-weight: normal;
 }
 ::selection {
-  background: #6FA4FE;
+  background: #2977f5;
+  color: #ffffff;
+}
+input, textarea {
+  caret-color: #2977f5;
+}
+html {
+  scroll-behavior: smooth !important;
 }
 
 :root {

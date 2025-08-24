@@ -113,6 +113,33 @@ window.ExunServices = {
     }
 };
 
+window.ExunServices.events = {
+    getAllEvents: function() {
+        return window.ExunServices.api.apiRequest('/events');
+    }
+};
+
+window.ExunServices.admin = {
+    getUserDetails: async function(search) {
+        if (search && search.trim() !== '') {
+            const resp = await window.ExunServices.api.apiRequest(`/admin/users?email=${encodeURIComponent(search)}`);
+            return { users: [resp] };
+        }
+        const resp = await window.ExunServices.api.apiRequest('/admin/export?type=users');
+        return { users: resp };
+    },
+    getEventRegistrations: async function(eventId) {
+        if (!eventId) {
+            return { registrations: [] };
+        }
+        const resp = await window.ExunServices.api.apiRequest(`/admin/event-registrations?event_id=${encodeURIComponent(eventId)}`);
+        return { registrations: resp };
+    },
+    updateEvent: function(eventData) {
+        return window.ExunServices.api.apiRequest('/admin/events', { method: 'POST', body: JSON.stringify(eventData) });
+    },
+};
+
 window.ExunServices.getCookie = function(name) {
     const val = document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith(name + '='));
     if (!val) return null;

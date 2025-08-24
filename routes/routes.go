@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -196,7 +195,6 @@ func SetupRoutes() *http.ServeMux {
 							summary.ConfirmedRegistrations = int(v)
 						}
 						summary.PendingRegistrations = 0
-						summary.TeamEvents = 0
 						data.Summary = summary
 					}
 				}
@@ -237,27 +235,21 @@ func SetupRoutes() *http.ServeMux {
 			raw := strings.TrimPrefix(path, "/")
 			decoded, err := url.PathUnescape(raw)
 			if err == nil && decoded != "" {
-				if b, err := os.ReadFile("./frontend/data/events.json"); err == nil {
-					var top map[string]json.RawMessage
-					if err := json.Unmarshal(b, &top); err == nil {
-						var eventsMap map[string]interface{}
-						if err := json.Unmarshal(top["events"], &eventsMap); err == nil {
-							for name := range eventsMap {
-								if name == decoded || slugify(name) == decoded {
-									canonical := slugify(name)
-									if decoded != canonical {
-										http.Redirect(w, r, "/"+canonical, http.StatusMovedPermanently)
-										return
-									}
-									data := getTemplateData(r)
-									data.PageTitle = name + " | Exun 2025"
-									if event, err := templates.FindEventBySlug(canonical); err == nil && event != nil {
-										data.Event = event
-									}
-									templates.RenderTemplate(w, "event-detail", data)
-									return
-								}
+				if evs, err := handlers.GetAllEventsData(); err == nil {
+					for _, ev := range evs {
+						if ev.Name == decoded || slugify(ev.Name) == decoded || ev.ID == decoded {
+							canonical := slugify(ev.Name)
+							if decoded != canonical {
+								http.Redirect(w, r, "/"+canonical, http.StatusMovedPermanently)
+								return
 							}
+							data := getTemplateData(r)
+							data.PageTitle = ev.Name + " | Exun 2025"
+							if event, err := templates.FindEventBySlug(canonical); err == nil && event != nil {
+								data.Event = event
+							}
+							templates.RenderTemplate(w, "event-detail", data)
+							return
 						}
 					}
 				}
@@ -305,14 +297,6 @@ func SetupRoutes() *http.ServeMux {
 	summaryHandler := http.HandlerFunc(handlers.GetUserSummary)
 	mux.Handle("/api/summary", middleware.AuthRequired(summaryHandler))
 
-	mux.HandleFunc("/admin", func(w http.ResponseWriter, r *http.Request) {
-		if !middleware.IsAuthenticated(r) {
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
-			return
-		}
-		handlers.AdminPanel(w, r)
-	})
-
 	adminStatsHandler := http.HandlerFunc(handlers.GetAdminStats)
 	mux.Handle("/api/admin/stats", middleware.AuthRequired(adminStatsHandler))
 
@@ -339,6 +323,8 @@ func SetupRoutes() *http.ServeMux {
 
 	adminSendInviteHandler := http.HandlerFunc(handlers.SendInvite)
 	mux.Handle("/api/admin/send-invite", middleware.AuthRequired(adminSendInviteHandler))
+	adminImportEventsHandler := http.HandlerFunc(handlers.ImportEvents)
+	mux.Handle("/api/admin/import_events", middleware.AuthRequired(adminImportEventsHandler))
 
 	return mux
 }

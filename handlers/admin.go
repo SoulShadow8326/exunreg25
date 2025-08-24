@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -481,6 +482,174 @@ func (ah *AdminHandler) ExportData(w http.ResponseWriter, r *http.Request) {
 var globalAdminHandler *AdminHandler
 var inviteService *mail.InviteEmailService
 
+func (ah *AdminHandler) ImportEvents(w http.ResponseWriter, r *http.Request) {
+	if !globalAuthHandler.isAuthenticated(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	email := globalAuthHandler.getAuthenticatedUser(r)
+	if !IsAdminEmail(email) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	b, err := os.ReadFile("frontend/data/events.json")
+	if err != nil {
+		http.Error(w, "Failed to read events.json", http.StatusInternalServerError)
+		return
+	}
+
+	var raw struct {
+		Default struct {
+			OpenToAll    bool   `json:"open_to_all"`
+			Eligibility  []int  `json:"eligibility"`
+			Participants int    `json:"participants"`
+			Mode         string `json:"mode"`
+			Descriptions struct {
+				Long  string `json:"long"`
+				Short string `json:"short"`
+			} `json:"descriptions"`
+			IndependentRegistrations bool   `json:"independent_registrations"`
+			Points                   int    `json:"points"`
+			Dates                    string `json:"dates"`
+		} `json:"default"`
+		Descriptions map[string]struct {
+			Long  string `json:"long"`
+			Short string `json:"short"`
+		} `json:"descriptions"`
+		Participants map[string]int    `json:"participants"`
+		Mode         map[string]string `json:"mode"`
+		Points       map[string]int    `json:"points"`
+		Individual   map[string]bool   `json:"individual"`
+		Eligibility  map[string][]int  `json:"eligibility"`
+		OpenToAll    map[string]bool   `json:"open_to_all"`
+	}
+
+	if err := json.Unmarshal(b, &raw); err != nil {
+		http.Error(w, "Failed to parse events.json", http.StatusInternalServerError)
+		return
+	}
+
+	type evtPair struct{ Name, Image string }
+	ordered := []evtPair{}
+	dec := json.NewDecoder(bytes.NewReader(b))
+	tok, err := dec.Token()
+	if err == nil {
+		for dec.More() {
+			k, err := dec.Token()
+			if err != nil {
+				break
+			}
+			key, ok := k.(string)
+			if !ok {
+				var skip interface{}
+				_ = dec.Decode(&skip)
+				continue
+			}
+			if key == "events" {
+				if _, err := dec.Token(); err != nil {
+					break
+				}
+				for dec.More() {
+					kn, err := dec.Token()
+					if err != nil {
+						break
+					}
+					name, _ := kn.(string)
+					var img string
+					if err := dec.Decode(&img); err != nil {
+						break
+					}
+					ordered = append(ordered, evtPair{Name: name, Image: img})
+				}
+				_, _ = dec.Token()
+			} else {
+				var skip interface{}
+				_ = dec.Decode(&skip)
+			}
+		}
+		_ = tok
+	}
+
+	created := 0
+	updated := 0
+	for _, pair := range ordered {
+		name := pair.Name
+		image := pair.Image
+		slug := slugify(name)
+		participants := raw.Default.Participants
+		if v, ok := raw.Participants[name]; ok {
+			participants = v
+		}
+		mode := raw.Default.Mode
+		if v, ok := raw.Mode[name]; ok {
+			mode = v
+		}
+		points := raw.Default.Points
+		if v, ok := raw.Points[name]; ok {
+			points = v
+		}
+		individual := raw.Default.IndependentRegistrations
+		if v, ok := raw.Individual[name]; ok {
+			individual = v
+		}
+
+		descShort := raw.Default.Descriptions.Short
+		descLong := raw.Default.Descriptions.Long
+		if v, ok := raw.Descriptions[name]; ok {
+			if v.Short != "" {
+				descShort = v.Short
+			}
+			if v.Long != "" {
+				descLong = v.Long
+			}
+		}
+
+		openAll := raw.Default.OpenToAll
+		if v, ok := raw.OpenToAll[name]; ok {
+			openAll = v
+		}
+
+		eligibility := ""
+		if openAll {
+			eligibility = "Open to all"
+		} else if vals, ok := raw.Eligibility[name]; ok && len(vals) >= 2 {
+			eligibility = fmt.Sprintf("Grades %d–%d", vals[0], vals[1])
+		} else if len(raw.Default.Eligibility) >= 2 {
+			eligibility = fmt.Sprintf("Grades %d–%d", raw.Default.Eligibility[0], raw.Default.Eligibility[1])
+		}
+
+		ev := db.Event{
+			ID:                      slug,
+			Name:                    name,
+			Image:                   image,
+			OpenToAll:               openAll,
+			Eligibility:             eligibility,
+			Participants:            participants,
+			Mode:                    mode,
+			IndependentRegistration: individual,
+			Points:                  points,
+			Dates:                   raw.Default.Dates,
+			DescriptionShort:        descShort,
+			DescriptionLong:         descLong,
+			CreatedAt:               time.Now(),
+			UpdatedAt:               time.Now(),
+		}
+
+		if existing, err := ah.db.Get("events", slug); err == nil && existing != nil {
+			_ = ah.db.Update("events", slug, ev)
+			updated++
+		} else {
+			_ = ah.db.Create("events", &ev)
+			created++
+		}
+	}
+
+	resp := map[string]interface{}{"created": created, "updated": updated}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
 func SetInviteService(svc *mail.InviteEmailService) {
 	inviteService = svc
 }
@@ -601,4 +770,12 @@ func SendInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	globalAdminHandler.SendInvite(w, r)
+}
+
+func ImportEvents(w http.ResponseWriter, r *http.Request) {
+	if globalAdminHandler == nil {
+		http.Error(w, "Admin handler not initialized", http.StatusInternalServerError)
+		return
+	}
+	globalAdminHandler.ImportEvents(w, r)
 }

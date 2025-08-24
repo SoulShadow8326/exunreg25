@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel | Exun 2025</title>
+    <title>{{.PageTitle}}</title>
     <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
     
     <link rel="stylesheet" href="/css/main.css">
@@ -18,7 +18,7 @@
     <main class="admin-page">
         <div class="admin-header">
             <div class="container">
-                <h1 class="admin-title">Admin Dashboard</h1>
+                <h1 class="admin-title">{{.PageTitle}}</h1>
             </div>
         </div>
         
@@ -29,16 +29,30 @@
                         <h3 class="admin-card__title">Events</h3>
                         <span class="admin-card__icon">⌘</span>
                     </div>
-                    <div class="admin-card__content">
-                                                <div class="stat-item">
-                            <span class="stat-label">Total Events:</span>
-                            <span class="stat-value">{{.Stats.TotalEvents}}</span>
+                        <div class="admin-card__content">
+                            {{if .Stats}}
+                            <div class="stat-item">
+                                <span class="stat-label">Total Events:</span>
+                                <span id="total-events" class="stat-value">{{.Stats.TotalEvents}}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Active Events:</span>
+                                <span id="active-events" class="stat-value">{{.Stats.TotalEvents}}</span>
+                            </div>
+                            {{else}}
+                            <div class="stat-item">
+                                <span class="stat-label">Total Events:</span>
+                                <span class="stat-value">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Active Events:</span>
+                                <span class="stat-value">0</span>
+                            </div>
+                            {{end}}
+                            <div class="admin-card__actions">
+                                <button id="import-events-btn" class="btn">Import events</button>
+                            </div>
                         </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Active Events:</span>
-                            <span class="stat-value">{{.Stats.TotalEvents}}</span>
-                        </div>
-                    </div>
                 </div>
                 
                 <div class="admin-card">
@@ -47,29 +61,39 @@
                         <span class="admin-card__icon">⌘</span>
                     </div>
                     <div class="admin-card__content">
+                        {{if .Stats}}
                         <div class="stat-item">
                             <span class="stat-label">Total Users:</span>
-                            <span class="stat-value">{{.Stats.TotalUsers}}</span>
+                            <span id="total-users" class="stat-value">{{.Stats.TotalUsers}}</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">Registrations:</span>
-                            <span class="stat-value">{{.Stats.TotalRegistrations}}</span>
+                            <span id="total-registrations" class="stat-value">{{.Stats.TotalRegistrations}}</span>
                         </div>
+                        {{else}}
+                        <div class="stat-item">
+                            <span class="stat-label">Total Users:</span>
+                            <span class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Registrations:</span>
+                            <span class="stat-value">0</span>
+                        </div>
+                        {{end}}
                     </div>
                 </div>
             </div>
-            
             <div class="admin-tabs">
                 <button class="admin-tab admin-tab--active" data-tab="overview">Overview</button>
                 <button class="admin-tab" data-tab="events">Events</button>
                 <button class="admin-tab" data-tab="users">Users</button>
                 <button class="admin-tab" data-tab="registrations">Registrations</button>
             </div>
-            
             <div class="admin-content" id="admin-content">
                 <div class="admin-section" id="overview-section">
                     <h2>System Overview</h2>
                     <div class="admin-grid">
+                        {{if .Stats}}
                         {{range $eventID, $stats := .Stats.EventStats}}
                         <div class="admin-card">
                             <h4>{{$stats.EventName}}</h4>
@@ -77,54 +101,11 @@
                             <p>Teams: {{$stats.TotalTeams}}</p>
                         </div>
                         {{end}}
+                        {{else}}
+                        <div class="loading-placeholder">Loading admin content...</div>
+                        {{end}}
                     </div>
                 </div>
-            </div>
-                
-                <div class="admin-card">
-                    <div class="admin-card__header">
-                        <h3 class="admin-card__title">Users</h3>
-                        <span class="admin-card__icon">⌘</span>
-                    </div>
-                    <div class="admin-card__content">
-                        <div class="stat-item">
-                            <span class="stat-label">Total Users:</span>
-                            <span class="stat-value" id="total-users">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">New Today:</span>
-                            <span class="stat-value" id="new-users-today">0</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="admin-card">
-                    <div class="admin-card__header">
-                        <h3 class="admin-card__title">Registrations</h3>
-                        <span class="admin-card__icon">⌘</span>
-                    </div>
-                    <div class="admin-card__content">
-                        <div class="stat-item">
-                            <span class="stat-label">Total Registrations:</span>
-                            <span class="stat-value" id="total-registrations">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Today:</span>
-                            <span class="stat-value" id="today-registrations">0</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="admin-tabs">
-                <button class="admin-tab admin-tab--active" data-tab="overview">Overview</button>
-                <button class="admin-tab" data-tab="events">Events</button>
-                <button class="admin-tab" data-tab="users">Users</button>
-                <button class="admin-tab" data-tab="registrations">Registrations</button>
-            </div>
-            
-            <div class="admin-content" id="admin-content">
-                <div class="loading-placeholder">Loading admin content...</div>
             </div>
         </div>
     </main>

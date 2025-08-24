@@ -65,7 +65,7 @@ class EventDetailPage {
         if (titleEl) titleEl.textContent = this.event.name;
         if (subtitleEl) subtitleEl.textContent = this.event.subtitle || 'Event Details';
 
-    const imageUrl = this.event.image ? `/illustrations/${this.event.image.toString().split('/').pop()}` : '/assets/exun_base.webp';
+    const imageUrl = this.event.image ? (this.event.image.toString().startsWith('/') ? this.event.image : `/illustrations/${this.event.image.toString().split('/').pop()}`) : '/assets/exun_base.webp';
         const headerContainer = document.querySelector('.event-detail-main');
         if (headerContainer) {
             headerContainer.insertAdjacentHTML('afterbegin', `

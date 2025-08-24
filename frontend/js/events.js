@@ -21,36 +21,13 @@ class EventsPage {
             this.events = response.data || [];
             this.events = this.events.map(event => ({
                 ...event,
-                    image: event.image ? `/illustrations/${event.image}` : '/assets/exun_base.webp'
+                    image: event.image ? (event.image.toString().startsWith('/') ? event.image : `/illustrations/${event.image.toString().split('/').pop()}`) : '/assets/exun_base.webp'
             }));
             this.filteredEvents = [...this.events];
         } catch (error) {
-            console.warn('EventsPage: /api/events failed, falling back to static JSON', error);
             console.error('Failed to load events from API:', error);
-            Utils.showToast('Loading events from backup...', 'info');
-            try {
-                const localResponse = await fetch('/data/events.json');
-                const json = await localResponse.json();
-                console.log('EventsPage: loaded fallback /data/events.json, events count=', Object.keys(json.events||{}).length);
-                this.events = Object.entries(json.events).map(([name, image]) => ({
-                    id: name,
-                    name,
-                    image: image ? `/illustrations/${image}` : '/assets/exun_base.webp',
-                    description_short: json.descriptions[name]?.short || '',
-                    description_long: json.descriptions[name]?.long || '',
-                    participants: json.participants[name] || 1,
-                    mode: json.mode[name] || 'Online',
-                    points: json.points[name] || 0,
-                    individual: json.individual[name] || false,
-                    eligibility: json.eligibility[name] || [6, 12],
-                    open_to_all: json.open_to_all[name] || false
-                }));
-                this.filteredEvents = [...this.events];
-            } catch (jsonError) {
-                console.error('Failed to load events from events.json:', jsonError);
-                Utils.showToast('Failed to load events', 'error');
-                this.showNoEvents();
-            }
+            Utils.showToast('Failed to load events', 'error');
+            this.showNoEvents();
         }
     }
 

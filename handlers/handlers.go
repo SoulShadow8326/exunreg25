@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -225,123 +224,38 @@ func GetAllEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, err := http.Dir("./frontend/data").Open("events.json")
+	eventsRaw, err := globalDB.GetAll("events")
 	if err != nil {
-		response := Response{
-			Status: "error",
-			Error:  "Failed to read events.json",
-		}
+		response := Response{Status: "error", Error: "Failed to retrieve events from DB"}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
 		return
 	}
-	defer file.Close()
-	buf := new(bytes.Buffer)
-	if _, err := buf.ReadFrom(file); err != nil {
-		response := Response{
-			Status: "error",
-			Error:  "Failed to read events.json",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	var top map[string]json.RawMessage
-	if err := json.Unmarshal(buf.Bytes(), &top); err != nil {
-		response := Response{
-			Status: "error",
-			Error:  "Failed to parse events.json",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	var descriptions map[string]map[string]interface{}
-	var participants map[string]interface{}
-	var modes map[string]interface{}
-	var points map[string]interface{}
-	var individual map[string]interface{}
-	var eligibility map[string]interface{}
-	var openToAll map[string]interface{}
-
-	json.Unmarshal(top["descriptions"], &descriptions)
-	json.Unmarshal(top["participants"], &participants)
-	json.Unmarshal(top["mode"], &modes)
-	json.Unmarshal(top["points"], &points)
-	json.Unmarshal(top["individual"], &individual)
-	json.Unmarshal(top["eligibility"], &eligibility)
-	json.Unmarshal(top["open_to_all"], &openToAll)
 
 	events := []map[string]interface{}{}
-	if eventsRaw, ok := top["events"]; ok {
-		dec := json.NewDecoder(bytes.NewReader(eventsRaw))
-		if tok, err := dec.Token(); err == nil {
-			if delim, ok := tok.(json.Delim); ok && delim == '{' {
-				for dec.More() {
-					kTok, err := dec.Token()
-					if err != nil {
-						break
-					}
-					name, _ := kTok.(string)
-					var image string
-					if err := dec.Decode(&image); err != nil {
-						image = ""
-					}
-
-					event := map[string]interface{}{
-						"id":    name,
-						"name":  name,
-						"image": image,
-						"slug":  slugify(name),
-					}
-
-					if descMap, exists := descriptions[name]; exists {
-						event["description_short"] = descMap["short"]
-						event["description_long"] = descMap["long"]
-					}
-
-					if p, exists := participants[name]; exists {
-						event["participants"] = p
-					}
-
-					if m, exists := modes[name]; exists {
-						event["mode"] = m
-					}
-
-					if pt, exists := points[name]; exists {
-						event["points"] = pt
-					}
-
-					if ind, exists := individual[name]; exists {
-						event["individual"] = ind
-					}
-
-					if elig, exists := eligibility[name]; exists {
-						event["eligibility"] = elig
-					}
-
-					if open, exists := openToAll[name]; exists {
-						event["open_to_all"] = open
-					}
-
-					events = append(events, event)
-				}
-				dec.Token()
+	for _, e := range eventsRaw {
+		if ev, ok := e.(*db.Event); ok {
+			event := map[string]interface{}{
+				"id":                ev.ID,
+				"name":              ev.Name,
+				"image":             ev.Image,
+				"slug":              ev.ID,
+				"description_short": ev.DescriptionShort,
+				"description_long":  ev.DescriptionLong,
+				"participants":      ev.Participants,
+				"mode":              ev.Mode,
+				"points":            ev.Points,
+				"individual":        ev.IndependentRegistration,
+				"eligibility":       ev.Eligibility,
+				"open_to_all":       ev.OpenToAll,
+				"dates":             ev.Dates,
 			}
+			events = append(events, event)
 		}
 	}
 
-	response := Response{
-		Status:  "success",
-		Message: "Events retrieved successfully",
-		Data:    events,
-	}
-
+	response := Response{Status: "success", Message: "Events retrieved successfully", Data: events}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
@@ -365,125 +279,64 @@ func GetEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, err := http.Dir("./frontend/data").Open("events.json")
-	if err != nil {
-		response := Response{
-			Status: "error",
-			Error:  "Failed to read events.json",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-	defer file.Close()
-
-	buf := new(bytes.Buffer)
-	if _, err := buf.ReadFrom(file); err != nil {
-		response := Response{
-			Status: "error",
-			Error:  "Failed to read events.json",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	var top map[string]json.RawMessage
-	if err := json.Unmarshal(buf.Bytes(), &top); err != nil {
-		response := Response{
-			Status: "error",
-			Error:  "Failed to parse events.json",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	var descriptions map[string]map[string]interface{}
-	var participants map[string]interface{}
-	var modes map[string]interface{}
-	var points map[string]interface{}
-	var individual map[string]interface{}
-	var eligibility map[string]interface{}
-	var openToAll map[string]interface{}
-
-	json.Unmarshal(top["descriptions"], &descriptions)
-	json.Unmarshal(top["participants"], &participants)
-	json.Unmarshal(top["mode"], &modes)
-	json.Unmarshal(top["points"], &points)
-	json.Unmarshal(top["individual"], &individual)
-	json.Unmarshal(top["eligibility"], &eligibility)
-	json.Unmarshal(top["open_to_all"], &openToAll)
-
-	var eventMap map[string]string
-	json.Unmarshal(top["events"], &eventMap)
-
-	var foundEvent map[string]interface{}
-	for name, image := range eventMap {
-		if name == eventID || slugify(name) == eventID {
-			foundEvent = map[string]interface{}{
-				"id":    name,
-				"name":  name,
-				"image": image,
+	if ev, err := globalDB.Get("events", eventID); err == nil && ev != nil {
+		if dbEv, ok := ev.(*db.Event); ok {
+			foundEvent := map[string]interface{}{
+				"id":                dbEv.ID,
+				"name":              dbEv.Name,
+				"image":             dbEv.Image,
+				"slug":              dbEv.ID,
+				"description_short": dbEv.DescriptionShort,
+				"description_long":  dbEv.DescriptionLong,
+				"participants":      dbEv.Participants,
+				"mode":              dbEv.Mode,
+				"points":            dbEv.Points,
+				"individual":        dbEv.IndependentRegistration,
+				"eligibility":       dbEv.Eligibility,
+				"open_to_all":       dbEv.OpenToAll,
+				"dates":             dbEv.Dates,
 			}
+			response := Response{Status: "success", Message: "Event retrieved successfully", Data: foundEvent}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+	}
 
-			if descMap, exists := descriptions[name]; exists {
-				if descMap != nil {
-					foundEvent["description_short"] = descMap["short"]
-					foundEvent["description_long"] = descMap["long"]
+	all, err := globalDB.GetAll("events")
+	if err == nil {
+		for _, item := range all {
+			if dbEv, ok := item.(*db.Event); ok {
+				if dbEv.ID == eventID || slugify(dbEv.Name) == eventID {
+					foundEvent := map[string]interface{}{
+						"id":                dbEv.ID,
+						"name":              dbEv.Name,
+						"image":             dbEv.Image,
+						"slug":              dbEv.ID,
+						"description_short": dbEv.DescriptionShort,
+						"description_long":  dbEv.DescriptionLong,
+						"participants":      dbEv.Participants,
+						"mode":              dbEv.Mode,
+						"points":            dbEv.Points,
+						"individual":        dbEv.IndependentRegistration,
+						"eligibility":       dbEv.Eligibility,
+						"open_to_all":       dbEv.OpenToAll,
+						"dates":             dbEv.Dates,
+					}
+					response := Response{Status: "success", Message: "Event retrieved successfully", Data: foundEvent}
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusOK)
+					json.NewEncoder(w).Encode(response)
+					return
 				}
 			}
-
-			if p, exists := participants[name]; exists {
-				foundEvent["participants"] = p
-			}
-
-			if m, exists := modes[name]; exists {
-				foundEvent["mode"] = m
-			}
-
-			if pt, exists := points[name]; exists {
-				foundEvent["points"] = pt
-			}
-
-			if ind, exists := individual[name]; exists {
-				foundEvent["individual"] = ind
-			}
-
-			if elig, exists := eligibility[name]; exists {
-				foundEvent["eligibility"] = elig
-			}
-
-			if open, exists := openToAll[name]; exists {
-				foundEvent["open_to_all"] = open
-			}
-
-			break
 		}
 	}
 
-	if foundEvent == nil {
-		response := Response{
-			Status: "error",
-			Error:  "Event not found",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	response := Response{
-		Status:  "success",
-		Message: "Event retrieved successfully",
-		Data:    foundEvent,
-	}
-
+	response := Response{Status: "error", Error: "Event not found"}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusNotFound)
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -491,4 +344,18 @@ var globalDB *db.Database
 
 func SetGlobalDB(database *db.Database) {
 	globalDB = database
+}
+
+func GetAllEventsData() ([]db.Event, error) {
+	events := []db.Event{}
+	all, err := globalDB.GetAll("events")
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range all {
+		if ev, ok := item.(*db.Event); ok {
+			events = append(events, *ev)
+		}
+	}
+	return events, nil
 }

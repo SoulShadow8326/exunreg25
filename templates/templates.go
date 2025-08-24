@@ -1,13 +1,12 @@
 package templates
 
 import (
-	"encoding/json"
-	"fmt"
 	"html/template"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
+
+	"exunreg25/handlers"
 )
 
 var templates *template.Template
@@ -53,7 +52,6 @@ type Summary struct {
 	TotalRegistrations     int `json:"total_registrations"`
 	ConfirmedRegistrations int `json:"confirmed_registrations"`
 	PendingRegistrations   int `json:"pending_registrations"`
-	TeamEvents             int `json:"team_events"`
 }
 
 type Event struct {
@@ -124,110 +122,32 @@ func RenderTemplate(w http.ResponseWriter, templateName string, data TemplateDat
 }
 
 func LoadEventsFromJSON() ([]Event, error) {
-	data, err := os.ReadFile("frontend/data/events.json")
+	dbEvents, err := handlers.GetAllEventsData()
 	if err != nil {
 		return nil, err
 	}
 
-	var raw struct {
-		Events  map[string]string `json:"events"`
-		Default struct {
-			OpenToAll    bool   `json:"open_to_all"`
-			Eligibility  []int  `json:"eligibility"`
-			Participants int    `json:"participants"`
-			Mode         string `json:"mode"`
-			Descriptions struct {
-				Long  string `json:"long"`
-				Short string `json:"short"`
-			} `json:"descriptions"`
-			IndependentRegistrations bool   `json:"independent_registrations"`
-			Points                   int    `json:"points"`
-			Dates                    string `json:"dates"`
-		} `json:"default"`
-		Descriptions map[string]struct {
-			Long  string `json:"long"`
-			Short string `json:"short"`
-		} `json:"descriptions"`
-		Participants map[string]int    `json:"participants"`
-		Mode         map[string]string `json:"mode"`
-		Points       map[string]int    `json:"points"`
-		Individual   map[string]bool   `json:"individual"`
-		Eligibility  map[string][]int  `json:"eligibility"`
-		OpenToAll    map[string]bool   `json:"open_to_all"`
-	}
-
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil, err
-	}
-
 	var events []Event
-	for name, image := range raw.Events {
-		slug := strings.ToLower(strings.ReplaceAll(name, " ", "-"))
-		slug = strings.ReplaceAll(slug, ":", "")
-		slug = strings.ReplaceAll(slug, "+", "plus")
-
-		participants := raw.Default.Participants
-		if v, ok := raw.Participants[name]; ok {
-			participants = v
+	for _, ev := range dbEvents {
+		img := ev.Image
+		if !strings.HasPrefix(img, "/") {
+			img = "/illustrations/" + img
 		}
-
-		mode := raw.Default.Mode
-		if v, ok := raw.Mode[name]; ok {
-			mode = v
-		}
-
-		points := raw.Default.Points
-		if v, ok := raw.Points[name]; ok {
-			points = v
-		}
-
-		individual := raw.Default.IndependentRegistrations
-		if v, ok := raw.Individual[name]; ok {
-			individual = v
-		}
-
-		descShort := raw.Default.Descriptions.Short
-		descLong := raw.Default.Descriptions.Long
-		if v, ok := raw.Descriptions[name]; ok {
-			if v.Short != "" {
-				descShort = v.Short
-			}
-			if v.Long != "" {
-				descLong = v.Long
-			}
-		}
-
-		openAll := raw.Default.OpenToAll
-		if v, ok := raw.OpenToAll[name]; ok {
-			openAll = v
-		}
-
-		eligibilityText := ""
-		if openAll {
-			eligibilityText = "Open to all"
-		} else if vals, ok := raw.Eligibility[name]; ok && len(vals) >= 2 {
-			eligibilityText = fmt.Sprintf("Grades %d–%d", vals[0], vals[1])
-		} else if len(raw.Default.Eligibility) >= 2 {
-			eligibilityText = fmt.Sprintf("Grades %d–%d", raw.Default.Eligibility[0], raw.Default.Eligibility[1])
-		}
-
-		dates := raw.Default.Dates
-
 		events = append(events, Event{
-			ID:               slug,
-			Name:             name,
-			Slug:             slug,
-			Image:            "/illustrations/" + image,
-			Mode:             mode,
-			Participants:     participants,
+			ID:               ev.ID,
+			Name:             ev.Name,
+			Slug:             ev.ID,
+			Image:            img,
+			Mode:             ev.Mode,
+			Participants:     ev.Participants,
 			MaxParticipants:  0,
 			IsRegistered:     false,
-			DescriptionShort: descShort,
-			DescriptionLong:  descLong,
-			EligibilityText:  eligibilityText,
-			Points:           points,
-			Individual:       individual,
-			Dates:            dates,
+			DescriptionShort: ev.DescriptionShort,
+			DescriptionLong:  ev.DescriptionLong,
+			EligibilityText:  ev.Eligibility,
+			Points:           ev.Points,
+			Individual:       ev.IndependentRegistration,
+			Dates:            ev.Dates,
 		})
 	}
 

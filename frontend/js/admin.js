@@ -51,10 +51,24 @@ class AdminPage {
             });
         }
 
-        const exportBtn = document.getElementById('export-btn');
-        if (exportBtn) {
-            exportBtn.addEventListener('click', () => {
-                this.exportData();
+        const importBtn = document.getElementById('import-events-btn');
+        if (importBtn) {
+            importBtn.addEventListener('click', async () => {
+                importBtn.disabled = true;
+                try {
+                    const resp = await ExunServices.api.apiRequest('/admin/import_events', { method: 'POST' });
+                    const data = resp && (resp.data || resp) || {};
+                    if (typeof data.created !== 'undefined' || typeof data.updated !== 'undefined') {
+                        Utils.showToast('Imported events: created=' + (data.created || 0) + ' updated=' + (data.updated || 0));
+                    } else {
+                        Utils.showToast('Import completed');
+                    }
+                } catch (err) {
+                    console.error('Import events failed', err);
+                    Utils.showToast('Import failed', 'error');
+                } finally {
+                    importBtn.disabled = false;
+                }
             });
         }
 
@@ -177,7 +191,7 @@ class AdminPage {
     async renderEvents() {
         try {
             const response = await ExunServices.events.getAllEvents();
-            this.events = response.events || [];
+            this.events = response.data || [];
             
             const content = document.getElementById('admin-content');
             content.innerHTML = `
@@ -236,26 +250,11 @@ class AdminPage {
         content.innerHTML = `
             <div class="admin-users">
                 <h3 class="text-xl font-semibold mb-6">User Management</h3>
-                <div class="mb-4">
-                    <input 
-                        type="text" 
-                        id="user-search" 
-                        class="form-input" 
-                        placeholder="Search users by email or name..."
-                    >
-                </div>
                 <div id="users-table-container">
                     <div class="loading-placeholder">Loading users...</div>
                 </div>
             </div>
         `;
-
-        const searchInput = document.getElementById('user-search');
-        if (searchInput) {
-            searchInput.addEventListener('input', Utils.debounce((e) => {
-                this.searchUsers(e.target.value);
-            }, 300));
-        }
 
         await this.loadUsers();
     }
@@ -266,9 +265,6 @@ class AdminPage {
             <div class="admin-registrations">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-xl font-semibold">Registration Management</h3>
-                    <button id="export-btn" class="btn btn--primary">
-                        Export Data
-                    </button>
                 </div>
                 <div id="registrations-content">
                     <div class="loading-placeholder">Loading registrations...</div>
@@ -295,6 +291,40 @@ class AdminPage {
         const container = document.getElementById('users-table-container');
         if (!container) return;
 
+        const rows = this.users.map(u => {
+            const user = (u && u.email) ? u : (u && u[0]) ? u[0] : u;
+            const name = user.fullname || user.Fullname || user.name || 'N/A';
+            const email = user.email || user.Email || '';
+            const school = user.institution_name || user.InstitutionName || user.school || 'N/A';
+            let regCount = 0;
+            if (user.registrations) {
+                if (typeof user.registrations === 'string') {
+                    try { const parsed = JSON.parse(user.registrations); regCount = Object.values(parsed).reduce((acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0); } catch(e) { regCount = 0 }
+                } else if (typeof user.registrations === 'object') {
+                    regCount = Object.values(user.registrations).reduce((acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0), 0);
+                }
+            }
+            let created = '';
+            if (user.created_at) created = Utils.formatDate(new Date(user.created_at));
+            else if (user.createdAt) created = Utils.formatDate(new Date(user.createdAt));
+            else created = 'N/A';
+
+            const id = user.id || user.ID || user.email || email;
+
+            return `
+                <tr>
+                    <td>${Utils.escapeHtml(name)}</td>
+                    <td>${Utils.escapeHtml(email)}</td>
+                    <td>${Utils.escapeHtml(school)}</td>
+                    <td>${regCount}</td>
+                    <td>${created}</td>
+                    <td>
+                        <button class="btn btn--secondary" data-user-id="${Utils.escapeHtml(id)}" onclick="adminPage.viewUserDetails('${Utils.escapeHtml(id)}')">View Details</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
         container.innerHTML = `
             <table class="admin-table">
                 <thead>
@@ -308,20 +338,7 @@ class AdminPage {
                     </tr>
                 </thead>
                 <tbody>
-                    ${this.users.map(user => `
-                        <tr>
-                            <td>${user.name || 'N/A'}</td>
-                            <td>${user.email}</td>
-                            <td>${user.school || 'N/A'}</td>
-                            <td>${user.registrationCount || 0}</td>
-                            <td>${Utils.formatDate(user.createdAt)}</td>
-                            <td>
-                                <button class="btn btn--secondary" onclick="adminPage.viewUserDetails('${user.id}')">
-                                    View Details
-                                </button>
-                            </td>
-                        </tr>
-                    `).join('')}
+                    ${rows}
                 </tbody>
             </table>
         `;
@@ -458,31 +475,6 @@ class AdminPage {
         }
     }
 
-    async exportData() {
-        try {
-            const response = await ExunServices.admin.exportData('csv');
-            
-            const blob = new Blob([response], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `exun-2025-data-${new Date().toISOString().split('T')[0]}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-            
-            Utils.showToast('Data exported successfully!', 'success');
-        } catch (error) {
-            console.error('Failed to export data:', error);
-            Utils.showToast('Failed to export data', 'error');
-        }
-    }
-
-    searchUsers(query) {
-        this.loadUsers(query);
-    }
-
     editEvent(eventId) {
         Utils.showToast('Edit event functionality coming soon!', 'info');
     }
@@ -492,7 +484,48 @@ class AdminPage {
     }
 
     viewUserDetails(userId) {
-        Utils.showToast('User details functionality coming soon!', 'info');
+        const modal = document.getElementById('admin-modal');
+        const modalContent = document.getElementById('modal-content');
+        const findId = String(userId || '').toLowerCase();
+        let user = null;
+        for (const u of this.users) {
+            if (!u) continue;
+            const candidates = [u.email, u.Email, u.username, u.Username, u.id, u.ID];
+            for (const c of candidates) {
+                if (c == null) continue;
+                if (String(c).toLowerCase() === findId) {
+                    user = u;
+                    break;
+                }
+            }
+            if (user) break;
+        }
+        let contentHtml = '<div class="admin-modal__header"><h3 class="admin-modal__title">User Details</h3><button id="modal-close" class="admin-modal__close">&times;</button></div>';
+        if (!user) {
+            contentHtml += '<div class="admin-modal__body">User not found</div>';
+        } else {
+            const u = user;
+            contentHtml += '<div class="admin-modal__body">';
+            contentHtml += `<p><strong>Name:</strong> ${Utils.escapeHtml(u.fullname || u.Fullname || u.name || '')}</p>`;
+            contentHtml += `<p><strong>Email:</strong> ${Utils.escapeHtml(u.email || u.Email || '')}</p>`;
+            contentHtml += `<p><strong>School:</strong> ${Utils.escapeHtml(u.institution_name || u.InstitutionName || '')}</p>`;
+            contentHtml += `<p><strong>Phone:</strong> ${Utils.escapeHtml(u.phone_number || u.PhoneNumber || '')}</p>`;
+            contentHtml += `<p><strong>Principal:</strong> ${Utils.escapeHtml(u.principals_name || u.PrincipalsName || '')} &lt;${Utils.escapeHtml(u.principals_email || u.PrincipalsEmail || '')}&gt;</p>`;
+            contentHtml += `<p><strong>School Code:</strong> ${Utils.escapeHtml(u.school_code || u.SchoolCode || '')}</p>`;
+            contentHtml += '<h4>Registrations</h4>';
+            try {
+                let regs = u.registrations || u.Registrations || u.registrations_raw || u.registrations;
+                if (typeof regs === 'string') regs = JSON.parse(regs || '{}');
+                contentHtml += `<pre>${Utils.escapeHtml(JSON.stringify(regs, null, 2))}</pre>`;
+            } catch (e) {
+                contentHtml += `<pre>Unable to parse registrations</pre>`;
+            }
+            contentHtml += '</div>';
+        }
+        modalContent.innerHTML = contentHtml;
+        modal.classList.add('admin-modal--open');
+        const closeBtn = document.getElementById('modal-close');
+        if (closeBtn) closeBtn.addEventListener('click', () => this.closeModal());
     }
 
     closeModal() {
