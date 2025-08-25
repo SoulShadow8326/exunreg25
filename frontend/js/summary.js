@@ -392,11 +392,11 @@ class SummaryPage {
             const clearBtn = row.querySelector('.btn-inline-clear');
             clearBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                if (rows.length <= 1) {
+                    if (rows.length <= 1) {
                     const confirmed = await showDiscardModal('This will delete your registration for this event. Continue?');
                     if (!confirmed) return;
                     try {
-                        const resp = await fetch('/api/submit_registrations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ id: eventId, data: [] }) });
+                        const resp = await fetch('/api/submit_registrations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ id: eventId, action: 'delete' }) });
                         let json = null;
                         try { json = await resp.json(); } catch(e) { json = null; }
                         if (resp.ok && (json === true || (json && json.status === 'success'))) {

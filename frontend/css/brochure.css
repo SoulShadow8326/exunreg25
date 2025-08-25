@@ -80,21 +80,17 @@
     top: 20px;
 }
 
-.brochure-nav__list {
-    list-style: none;
-    padding: 8px 12px;
-    margin: 0;
-}
-
 .brochure-nav__list li {
-    margin: 8px 0;
+    margin: 10px 0;
     text-align: left;
 }
-
 .brochure-nav__list a {
     color: #2f5d88;
     text-decoration: none;
     font-size: 14px;
+    display: block;
+    padding: 4px 0;
+    line-height: 1.6;
 }
 
 .brochure-main {

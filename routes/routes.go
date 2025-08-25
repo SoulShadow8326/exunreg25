@@ -2,6 +2,8 @@ package routes
 
 import (
 	"encoding/json"
+	"fmt"
+	"html/template"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -39,7 +41,7 @@ func getTemplateData(r *http.Request) templates.TemplateData {
 
 	data.IsHome = (r.URL.Path == "/" || r.URL.Path == "/index")
 	data.IsEvents = (r.URL.Path == "/events")
-	data.IsBrochure = (r.URL.Path == "/brochure")
+	data.IsBrochure = strings.HasPrefix(r.URL.Path, "/brochure")
 
 	return data
 }
@@ -64,6 +66,44 @@ func SetupRoutes() *http.ServeMux {
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
+
+		if strings.HasPrefix(path, "/brochure/") {
+			slug := strings.TrimPrefix(path, "/brochure/")
+			slug = strings.Trim(slug, "/")
+			data := getTemplateData(r)
+			data.PageTitle = "Brochure | Exun 2025"
+			if b, err := os.ReadFile("frontend/data/invite.md"); err == nil {
+				data.BrochureMarkdown = string(b)
+			} else if b2, err2 := os.ReadFile("data/invite.md"); err2 == nil {
+				data.BrochureMarkdown = string(b2)
+			}
+			type tocItem struct {
+				Level int
+				Title string
+				ID    string
+			}
+			var toc []tocItem
+			var navBuilder strings.Builder
+			lines := strings.Split(data.BrochureMarkdown, "\n")
+			for _, line := range lines {
+				m := regexp.MustCompile(`^(#{1,3})\s+(.*)$`).FindStringSubmatch(line)
+				if len(m) == 3 {
+					level := len(m[1])
+					title := strings.TrimSpace(m[2])
+					titleClean := strings.ReplaceAll(title, "*", "")
+					titleClean = strings.ReplaceAll(titleClean, "_", "")
+					id := slugify(titleClean)
+					toc = append(toc, tocItem{Level: level, Title: titleClean, ID: id})
+					navBuilder.WriteString(fmt.Sprintf("<li class=\"nav-level-%d\"><a href=\"/brochure/%s\">%s</a></li>", level, id, template.HTMLEscapeString(titleClean)))
+				}
+			}
+			navJSON, _ := json.Marshal(toc)
+			data.BrochureTOC = string(navJSON)
+			data.BrochureNavHTML = template.HTML(navBuilder.String())
+			data.BrochureScrollTo = slug
+			templates.RenderTemplate(w, "brochure", data)
+			return
+		}
 		switch path {
 		case "/", "/index":
 			data := getTemplateData(r)
@@ -94,14 +134,13 @@ func SetupRoutes() *http.ServeMux {
 				data.Events = events
 				cats := make(map[string]struct{})
 				for _, e := range events {
-					if strings.Contains(e.Name, "Build") {
-						cats["build"] = struct{}{}
-					}
-					if strings.Contains(e.Name, "CubXL") {
-						cats["cubing"] = struct{}{}
-					}
-					if strings.Contains(e.Name, "DomainSquare") {
-						cats["gaming"] = struct{}{}
+					if e.Slug != "" {
+						if strings.Contains(e.Name, "Build") {
+							cats["build"] = struct{}{}
+						}
+						if strings.Contains(e.Name, "CubXL") {
+							cats["cubing"] = struct{}{}
+						}
 					}
 				}
 				for k := range cats {
@@ -110,54 +149,40 @@ func SetupRoutes() *http.ServeMux {
 			}
 			templates.RenderTemplate(w, "events", data)
 			return
-		case "/event-detail":
+		case "/brochure":
 			data := getTemplateData(r)
-			data.PageTitle = "Event | Exun 2025"
-			id := r.URL.Query().Get("id")
-			if id == "" {
-				http.Redirect(w, r, "/events", http.StatusSeeOther)
-				return
+			data.PageTitle = "Brochure | Exun 2025"
+			if b, err := os.ReadFile("frontend/data/invite.md"); err == nil {
+				data.BrochureMarkdown = string(b)
+			} else if b2, err2 := os.ReadFile("data/invite.md"); err2 == nil {
+				data.BrochureMarkdown = string(b2)
 			}
-			if decoded, err := url.PathUnescape(id); err == nil && decoded != "" {
-				id = decoded
+
+			type tocItem struct {
+				Level int
+				Title string
+				ID    string
 			}
-			slug := slugify(id)
-			if event, err := templates.FindEventBySlug(slug); err == nil && event != nil {
-				data.Event = event
-				data.PageTitle = event.Name + " | Exun 2025"
-			} else {
-				http.Redirect(w, r, "/events", http.StatusSeeOther)
-				return
-			}
-			templates.RenderTemplate(w, "event-detail", data)
-			return
-		case "/admin":
-			data := getTemplateData(r)
-			if !data.IsAuthenticated {
-				http.Redirect(w, r, "/login", http.StatusSeeOther)
-				return
-			}
-			if !data.IsAdmin {
-				data.PageTitle = "Unauthorized | Exun 2025"
-				templates.RenderTemplate(w, "404", data)
-				return
-			}
-			data.PageTitle = "Admin Panel | Exun 2025"
-			rec := httptest.NewRecorder()
-			hreq := r.Clone(r.Context())
-			handlers.GetAdminStats(rec, hreq)
-			if rec.Code == http.StatusOK {
-				var stats templates.AdminStats
-				if err := json.Unmarshal(rec.Body.Bytes(), &stats); err == nil {
-					data.Stats = &templates.AdminStats{
-						TotalUsers:         stats.TotalUsers,
-						TotalEvents:        stats.TotalEvents,
-						TotalRegistrations: stats.TotalRegistrations,
-						EventStats:         stats.EventStats,
-					}
+			var toc []tocItem
+			var navBuilder strings.Builder
+			lines := strings.Split(data.BrochureMarkdown, "\n")
+			for _, line := range lines {
+				m := regexp.MustCompile(`^(#{1,3})\s+(.*)$`).FindStringSubmatch(line)
+				if len(m) == 3 {
+					level := len(m[1])
+					title := strings.TrimSpace(m[2])
+					titleClean := regexp.MustCompile(`\*\*(.*?)\*\*`).ReplaceAllString(title, "$1")
+					titleClean = regexp.MustCompile(`\*(.*?)\*`).ReplaceAllString(titleClean, "$1")
+					id := slugify(titleClean)
+					toc = append(toc, tocItem{Level: level, Title: titleClean, ID: id})
+					navBuilder.WriteString(fmt.Sprintf("<li class=\"nav-level-%d\"><a href=\"/brochure/%s\">%s</a></li>", level, id, template.HTMLEscapeString(titleClean)))
 				}
 			}
-			templates.RenderTemplate(w, "admin", data)
+			navJSON, _ := json.Marshal(toc)
+			data.BrochureTOC = string(navJSON)
+			data.BrochureNavHTML = template.HTML(navBuilder.String())
+
+			templates.RenderTemplate(w, "brochure", data)
 			return
 		case "/summary":
 			data := getTemplateData(r)
@@ -223,16 +248,6 @@ func SetupRoutes() *http.ServeMux {
 			data := getTemplateData(r)
 			data.PageTitle = "Complete Signup | Exun 2025"
 			templates.RenderTemplate(w, "complete", data)
-			return
-		case "/brochure":
-			data := getTemplateData(r)
-			data.PageTitle = "Brochure | Exun 2025"
-			if b, err := os.ReadFile("frontend/data/invite.md"); err == nil {
-				data.BrochureMarkdown = string(b)
-			} else if b2, err2 := os.ReadFile("data/invite.md"); err2 == nil {
-				data.BrochureMarkdown = string(b2)
-			}
-			templates.RenderTemplate(w, "brochure", data)
 			return
 		case "/login":
 			data := getTemplateData(r)

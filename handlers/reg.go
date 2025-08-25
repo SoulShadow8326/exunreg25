@@ -70,14 +70,17 @@ func SubmitRegistrations(w http.ResponseWriter, r *http.Request) {
 	}
 	reqEventID := fmt.Sprintf("%v", idVal)
 
+	var actionStr string
+	if av, ok := raw["action"]; ok {
+		actionStr = fmt.Sprintf("%v", av)
+	}
+
 	dataVal, ok := raw["data"]
 	if !ok {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(false)
-		return
+		dataVal = nil
 	}
 	dataArr, ok := dataVal.([]interface{})
-	if !ok {
+	if !ok && dataVal != nil {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(false)
 		return
@@ -111,7 +114,7 @@ func SubmitRegistrations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(dataArr) == 0 {
+	if actionStr == "delete" {
 		if user.Registrations != nil {
 			delete(user.Registrations, reqEventID)
 		}
@@ -133,55 +136,29 @@ func SubmitRegistrations(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(true)
 		return
 	}
+
+	if len(dataArr) == 0 {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(false)
+		return
+	}
 	if len(dataArr) > event.Participants {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(false)
 		return
 	}
 
-	var minClass, maxClass int
-	if event.OpenToAll {
-		minClass = 1
-		maxClass = 12
-	} else {
-		var eligibility []int
-		if err := json.Unmarshal([]byte(event.Eligibility), &eligibility); err == nil && len(eligibility) == 2 {
-			minClass = eligibility[0]
-			maxClass = eligibility[1]
-		} else {
-			re := regexp.MustCompile(`(\d{1,2}).*?(\d{1,2})`)
-			m := re.FindStringSubmatch(event.Eligibility)
-			if len(m) >= 3 {
-				minClass, _ = strconv.Atoi(m[1])
-				maxClass, _ = strconv.Atoi(m[2])
-			} else {
-				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(false)
-				return
-			}
-		}
-	}
-
-	participants := make([]db.Participant, 0, len(dataArr))
+	localParts := make([]Participant, 0, len(dataArr))
 	for _, item := range dataArr {
 		m, ok := item.(map[string]interface{})
 		if !ok {
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(false)
+			json.NewEncoder(w).Encode(Response{Status: "error", Error: "invalid participant data"})
 			return
 		}
-		name := strings.TrimSpace(strings.ToUpper(fmt.Sprintf("%v", m["name"])))
-		if name == "" {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(false)
-			return
-		}
+		name := fmt.Sprintf("%v", m["name"])
 		emailVal := fmt.Sprintf("%v", m["email"])
-		if !validateEmailFormat(emailVal) {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(false)
-			return
-		}
+
 		var classInt int
 		switch cv := m["class"].(type) {
 		case float64:
@@ -190,43 +167,44 @@ func SubmitRegistrations(w http.ResponseWriter, r *http.Request) {
 			ci, err := strconv.Atoi(strings.TrimSpace(cv))
 			if err != nil {
 				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(false)
+				json.NewEncoder(w).Encode(Response{Status: "error", Error: "invalid class value"})
 				return
 			}
 			classInt = ci
 		default:
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(false)
-			return
-		}
-		if classInt < 6 || classInt > 12 {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(false)
-			return
-		}
-		if classInt < minClass || classInt > maxClass {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(false)
-			return
-		}
-		phoneVal := fmt.Sprintf("%v", m["phone"])
-		phoneDigits := strings.TrimSpace(phoneVal)
-		if len(phoneDigits) != 10 {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(false)
-			return
-		}
-		if _, err := strconv.Atoi(phoneDigits); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(false)
-			return
+			ci, err := strconv.Atoi(fmt.Sprintf("%v", cv))
+			if err != nil {
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(Response{Status: "error", Error: "invalid class value"})
+				return
+			}
+			classInt = ci
 		}
 
-		participants = append(participants, db.Participant{
+		phoneVal := fmt.Sprintf("%v", m["phone"])
+
+		localParts = append(localParts, Participant{
 			Name:  name,
 			Email: emailVal,
 			Class: classInt,
-			Phone: phoneDigits,
+			Phone: phoneVal,
+		})
+	}
+
+	if err := validateParticipants(localParts, event); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(Response{Status: "error", Error: err.Error()})
+		return
+	}
+
+	participants := make([]db.Participant, 0, len(localParts))
+	for _, p := range localParts {
+		participants = append(participants, db.Participant{
+			Name:  strings.ToUpper(strings.TrimSpace(p.Name)),
+			Email: strings.TrimSpace(p.Email),
+			Class: p.Class,
+			Phone: strings.TrimSpace(p.Phone),
 		})
 	}
 

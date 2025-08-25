@@ -26,7 +26,7 @@
                 <div class="brochure-grid">
                     <aside class="brochure-nav">
                         <h4>Contents</h4>
-                        <ul id="nav-list" class="brochure-nav__list"></ul>
+                        <ul id="nav-list" class="brochure-nav__list">{{.BrochureNavHTML}}</ul>
                     </aside>
                     <section class="brochure-main">
                         <div id="html-content" class="brochure-markdown"></div>
@@ -38,6 +38,8 @@
     
     {{template "footer" .}}
     <script type="text/plain" id="raw-markdown-source" style="display:none">{{.BrochureMarkdown}}</script>
+    <script id="brochure-toc-json" type="application/json">{{.BrochureTOC}}</script>
+    <script id="brochure-scroll-to" type="text/plain" style="display:none">{{.BrochureScrollTo}}</script>
 
     <script src="/js/api.js"></script>
     <script src="/js/utils.js"></script>
@@ -76,65 +78,72 @@
             const container = document.getElementById('html-content');
             if (container) container.innerHTML = htmlContent;
 
-            const slugify = (s) => {
-                if (!s) return '';
-                return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-            };
+            try {
+                const tocEl = document.getElementById('brochure-toc-json');
+                const scrollEl = document.getElementById('brochure-scroll-to');
+                const toc = tocEl && tocEl.textContent ? JSON.parse(tocEl.textContent) : [];
+                const scrollTo = scrollEl && (scrollEl.textContent || scrollEl.innerText) ? (scrollEl.textContent || scrollEl.innerText).trim() : '';
 
-            ['h1','h2','h3','h4'].forEach(tag => {
-                const els = Array.from(container.querySelectorAll(tag));
-                els.forEach(h => {
-                    if (!h.id || h.id.trim() === '') {
-                        const id = slugify(h.textContent || h.innerText || '');
-                        if (id) h.id = id;
-                    }
+                function slugify(s) {
+                    return String(s || '')
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]+/g, '-')
+                        .replace(/^-+|-+$/g, '');
+                }
+
+                const headings = container.querySelectorAll('h1, h2, h3');
+                headings.forEach(h => {
+                    const id = slugify((h.textContent || '').trim());
+                    if (id) h.id = id;
                 });
-            });
 
-            const navList = document.getElementById('nav-list');
-            if (navList) {
-                const lines = md.split(/\r?\n/);
-                const stripMarkdown = (s) => {
-                    if (!s) return '';
+                if (scrollTo) {
+                    const target = document.getElementById(scrollTo);
+                    if (target) {
+                        setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                    }
+                }
+            } catch (e) {
+                console.warn('Brochure TOC/scroll handling failed', e);
+            }
+
+            try {
+                const navList = document.getElementById('nav-list');
+                function handleNavClick(evt) {
+                    const a = evt.target.closest && evt.target.closest('a');
+                    if (!a) return;
+                    const href = a.getAttribute('href') || a.href || '';
+                    let url;
                     try {
-                        const doc = new DOMParser().parseFromString(s, 'text/html');
-                        s = doc.documentElement.textContent || s;
-                    } catch (e) {}
-                    let out = String(s).replace(/\*\*(.*?)\*\*/g, '$1');
-                    out = out.replace(/\*(.*?)\*/g, '$1');
-                    out = out.replace(/`(.*?)`/g, '$1');
-                    out = out.replace(/!\[([^\]]*)\]\([^\)]*\)/g, '$1');
-                    out = out.replace(/\[([^\]]+)\]\([^\)]*\)/g, '$1');
-                    out = out.replace(/[\*_>]/g, '');
-                    return out.trim();
-                };
+                        url = new URL(href, location.origin);
+                    } catch (err) {
+                        return;
+                    }
+                    if (url.pathname && url.pathname.startsWith('/brochure')) {
+                        evt.preventDefault();
+                        const slug = url.pathname.replace(/^\/brochure\/?/, '').replace(/\/$/, '');
+                        history.pushState(null, '', '/brochure/' + slug);
+                        const target = document.getElementById(slug);
+                        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }
+                if (navList) navList.addEventListener('click', handleNavClick);
 
-                lines.forEach(line => {
-                    const m = line.match(/^(#{1,3})\s+(.*)$/);
-                    if (m) {
-                        const level = m[1].length;
-                        const rawTitle = m[2].trim();
-                        const title = stripMarkdown(rawTitle);
-                        if (!title) return;
-                        const id = slugify(title);
-                        const li = document.createElement('li');
-                        li.className = 'nav-level-' + level;
-                        const a = document.createElement('a');
-                        a.href = '#' + id;
-                        a.textContent = title;
-                        li.appendChild(a);
-                        navList.appendChild(li);
-                        const target = document.getElementById(id);
-                        if (target) {
-                            target.style.color = '#456484';
-                        }
+                window.addEventListener('popstate', () => {
+                    const p = location.pathname || '';
+                    if (p.startsWith('/brochure/')) {
+                        const slug = p.replace(/^\/brochure\/?/, '').replace(/\/$/, '');
+                        const target = document.getElementById(slug);
+                        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }
                 });
+            } catch (e) {
+                console.warn('Failed to attach brochure nav handlers', e);
             }
         } catch (e) {
             console.error('Failed to render brochure markdown', e);
         }
     </script>
-    <script type="text/plain" id="raw-markdown-source" style="display:none">{{.BrochureMarkdown}}</script>
+    
 </body>
 </html>

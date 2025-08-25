@@ -18,6 +18,9 @@ type TemplateData struct {
 	IsEvents         bool
 	IsBrochure       bool
 	BrochureMarkdown string
+	BrochureNavHTML  template.HTML
+	BrochureTOC      string
+	BrochureScrollTo string
 	User             *User
 	Event            *Event
 	Events           []Event
