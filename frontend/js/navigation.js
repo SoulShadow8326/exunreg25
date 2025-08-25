@@ -47,9 +47,12 @@ class Navigation {
                 <button class="btn btn--primary navbar__link" data-action="logout">Logout</button>
             `;
         } else {
-            authContainer.innerHTML = `
-                <button class="btn btn--primary navbar__link" data-action="login">Login</button>
-            `;
+            const trimmed = authContainer.textContent ? authContainer.textContent.trim() : '';
+            if (!trimmed) {
+                authContainer.innerHTML = `
+                    <button class="btn btn--primary navbar__link" data-action="login">Login</button>
+                `;
+            }
         }
     }
 

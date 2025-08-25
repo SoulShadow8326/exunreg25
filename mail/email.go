@@ -33,7 +33,7 @@ func NewEmailService(config *EmailConfig) *EmailService {
 }
 
 func (es *EmailService) SendOTP(to, otp, schoolCode string) error {
-	subject := fmt.Sprintf("Exun Registration Authentication OTP - %s", otp)
+	subject := fmt.Sprintf("Exun Registration Permament Authentication Code - %s", otp)
 
 	htmlBody, err := es.renderOTPTemplate(otp, schoolCode)
 	if err != nil {
@@ -60,11 +60,17 @@ func (es *EmailService) renderOTPTemplate(otp string, schoolCode string) (string
 		return "", fmt.Errorf("failed to parse template: %v", err)
 	}
 
+	td := `<td align="center" valign="middle" style="width:64px; height:64px; background-color:#2977f5; color:#ffffff; border-radius:12px; font-size:2rem; font-weight:800; line-height:64px; text-align:center; vertical-align:middle; padding:0;">%s</td>`
+	var cells strings.Builder
+	for _, d := range strings.Split(otp, "") {
+		cells.WriteString(fmt.Sprintf(td, template.HTMLEscapeString(d)))
+	}
+
 	data := struct {
 		OTP        string
-		OTPDigits  []string
+		OTPCells   template.HTML
 		SchoolCode string
-	}{OTP: otp, OTPDigits: strings.Split(otp, ""), SchoolCode: schoolCode}
+	}{OTP: otp, OTPCells: template.HTML(cells.String()), SchoolCode: schoolCode}
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, data); err != nil {

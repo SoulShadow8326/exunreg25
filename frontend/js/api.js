@@ -113,6 +113,17 @@ window.ExunServices = {
     }
 };
 
+window.ExunServices.auth = {
+    sendOTP: async function(email) {
+        try {
+            const resp = await window.ExunServices.api.apiRequest('/auth/send-otp', { method: 'POST', body: JSON.stringify({ email }) });
+            return { success: true, message: resp.message || 'OTP sent', data: resp.data };
+        } catch (err) {
+            return { success: false, message: err.message || 'Failed to send OTP' };
+        }
+    }
+};
+
 window.ExunServices.events = {
     getAllEvents: function() {
         return window.ExunServices.api.apiRequest('/events');

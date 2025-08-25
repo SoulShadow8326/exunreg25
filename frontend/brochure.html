@@ -43,6 +43,7 @@
 
     <script src="/js/api.js"></script>
     <script src="/js/utils.js"></script>
+    <script src="/js/navigation.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
         const rawMarkdownEl = document.getElementById('raw-markdown-source');
@@ -92,16 +93,42 @@
                 }
 
                 const headings = container.querySelectorAll('h1, h2, h3');
-                headings.forEach(h => {
-                    const id = slugify((h.textContent || '').trim());
-                    if (id) h.id = id;
-                });
+                try {
+                    const tocItems = Array.isArray(toc) ? toc : [];
+                    const normalize = s => String(s || '').replace(/\s+/g, ' ').trim();
+                    const titleToId = new Map();
+                    tocItems.forEach(it => {
+                        if (it && it.Title && it.ID) {
+                            titleToId.set(normalize(it.Title), it.ID);
+                        }
+                    });
+
+                    headings.forEach(h => {
+                        const text = normalize(h.textContent || '');
+                        const mapped = titleToId.get(text);
+                        if (mapped) {
+                            h.id = mapped;
+                        } else {
+                            const id = slugify(text);
+                            if (id) h.id = id;
+                        }
+                    });
+                } catch (err) {
+                    headings.forEach(h => {
+                        const id = slugify((h.textContent || '').trim());
+                        if (id) h.id = id;
+                    });
+                }
 
                 if (scrollTo) {
-                    const target = document.getElementById(scrollTo);
-                    if (target) {
-                        setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-                    }
+                    requestAnimationFrame(() => {
+                        setTimeout(() => {
+                            const target = document.getElementById(scrollTo);
+                            if (target) {
+                                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                        }, 100);
+                    });
                 }
             } catch (e) {
                 console.warn('Brochure TOC/scroll handling failed', e);

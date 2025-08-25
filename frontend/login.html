@@ -34,12 +34,27 @@
                         <div id="email-error" class="form-error"></div>
                     </div>
                     
+                    <div class="form-group" id="password-group">
+                        <label for="password" class="form-label">Password</label>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            class="form-input"
+                            placeholder="Enter your password"
+                        >
+                        <div id="password-error" class="form-error"></div>
+                    </div>
                     
                     <button type="submit" class="login-btn" id="auth-submit">
                         Sign In
                     </button>
                 </form>
                 
+                <div class="login-switch">
+                    <span class="login-switch-text" id="switch-text">Don't have an account? </span>
+                    <a href="#" class="login-switch-link" id="auth-switch">Register here</a>
+                </div>
             </div>
             
             <div id="otp-container" style="display: none;">
@@ -73,6 +88,23 @@
                 </div>
             </div>
 
+            <div id="set-password-container" style="display: none;">
+                <div class="login-header">
+                    <h2 class="login-title">Set your password</h2>
+                    <p class="login-subtitle">Choose a password to secure your account</p>
+                </div>
+                <form class="login-form" id="set-password-form">
+                    <div class="form-group">
+                        <label class="form-label" for="new_password">Password</label>
+                        <input type="password" id="new_password" name="new_password" class="form-input" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="confirm_password">Confirm Password</label>
+                        <input type="password" id="confirm_password" name="confirm_password" class="form-input" required />
+                    </div>
+                    <button type="submit" class="login-btn">Set Password</button>
+                </form>
+            </div>
         </div>
     </main>
     

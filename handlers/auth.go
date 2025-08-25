@@ -56,6 +56,138 @@ func (ah *AuthHandler) generateAuthToken(email string) string {
 	return hex.EncodeToString(hash[:])
 }
 
+func (ah *AuthHandler) hashPassword(pw string) string {
+	h := sha256.Sum256([]byte(ah.config.Salt + pw))
+	return hex.EncodeToString(h[:])
+}
+
+func (ah *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if !ah.isAuthenticated(r) {
+		response := Response{Status: "error", Error: "Authentication required"}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	email := ah.getAuthenticatedUser(r)
+	var req struct {
+		Current string `json:"current_password"`
+		New     string `json:"new_password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response := Response{Status: "error", Error: "Invalid request body"}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	if len(req.New) < 8 {
+		response := Response{Status: "error", Error: "Password must be at least 8 characters"}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	userIface, err := ah.db.Get("users", email)
+	if err != nil || userIface == nil {
+		response := Response{Status: "error", Error: "User not found"}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	u := userIface.(*db.User)
+	if u.PasswordHash != "" {
+		if ah.hashPassword(req.Current) != u.PasswordHash {
+			response := Response{Status: "error", Error: "Current password incorrect"}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+	}
+	u.PasswordHash = ah.hashPassword(req.New)
+	u.UpdatedAt = time.Now()
+	if err := ah.db.Update("users", email, u); err != nil {
+		response := Response{Status: "error", Error: "Failed to update password"}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	response := Response{Status: "success", Message: "Password updated"}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func (ah *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		Email       string `json:"email"`
+		OTP         string `json:"otp"`
+		NewPassword string `json:"new_password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response := Response{Status: "error", Error: "Invalid request body"}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	if !isValidEmail(req.Email) {
+		response := Response{Status: "error", Error: "Invalid email"}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	expected := ah.generateOTP(req.Email)
+	if req.OTP != expected {
+		response := Response{Status: "error", Error: "Invalid OTP"}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	if len(req.NewPassword) < 8 {
+		response := Response{Status: "error", Error: "Password must be at least 8 characters"}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	userIface, err := ah.db.Get("users", req.Email)
+	if err != nil || userIface == nil {
+		response := Response{Status: "error", Error: "User not found"}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	u := userIface.(*db.User)
+	u.PasswordHash = ah.hashPassword(req.NewPassword)
+	u.UpdatedAt = time.Now()
+	if err := ah.db.Update("users", req.Email, u); err != nil {
+		response := Response{Status: "error", Error: "Failed to update password"}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	response := Response{Status: "success", Message: "Password reset successful"}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
 func (ah *AuthHandler) generateOTP(email string) string {
 	token := ah.generateAuthToken(email)
 	last6 := token[len(token)-6:]
@@ -264,6 +396,7 @@ func (ah *AuthHandler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 		Data: map[string]interface{}{
 			"email":          req.Email,
 			"needs_complete": needsComplete,
+			"needs_signup":   needsComplete,
 			"token":          authToken,
 		},
 	}
@@ -359,6 +492,7 @@ func (ah *AuthHandler) CompleteSignup(w http.ResponseWriter, r *http.Request) {
 
 	var signupData struct {
 		Username string `json:"username"`
+		Password string `json:"password,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&signupData); err != nil {
 		response := Response{
@@ -404,8 +538,16 @@ func (ah *AuthHandler) CompleteSignup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	u := existing.(*db.User)
+	modified := false
 	if signupData.Username != "" {
 		u.Username = signupData.Username
+		modified = true
+	}
+	if signupData.Password != "" {
+		u.PasswordHash = ah.hashPassword(signupData.Password)
+		modified = true
+	}
+	if modified {
 		u.UpdatedAt = time.Now()
 		if err := ah.db.Update("users", email, u); err != nil {
 			fmt.Printf("Update user error: %v\n", err)
@@ -475,6 +617,22 @@ func SendOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	globalAuthHandler.SendOTP(w, r)
+}
+
+func ChangePassword(w http.ResponseWriter, r *http.Request) {
+	if globalAuthHandler == nil {
+		http.Error(w, "Auth handler not initialized", http.StatusInternalServerError)
+		return
+	}
+	globalAuthHandler.ChangePassword(w, r)
+}
+
+func ResetPassword(w http.ResponseWriter, r *http.Request) {
+	if globalAuthHandler == nil {
+		http.Error(w, "Auth handler not initialized", http.StatusInternalServerError)
+		return
+	}
+	globalAuthHandler.ResetPassword(w, r)
 }
 
 func VerifyOTP(w http.ResponseWriter, r *http.Request) {

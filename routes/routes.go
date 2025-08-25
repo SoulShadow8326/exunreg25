@@ -295,6 +295,8 @@ func SetupRoutes() *http.ServeMux {
 	mux.HandleFunc("/api/auth/verify-otp", handlers.VerifyOTP)
 	mux.HandleFunc("/api/auth/logout", handlers.Logout)
 	mux.HandleFunc("/api/auth/complete", handlers.CompleteSignup)
+	mux.HandleFunc("/api/auth/change-password", handlers.ChangePassword)
+	mux.HandleFunc("/api/auth/reset-password", handlers.ResetPassword)
 
 	mux.HandleFunc("/api/users/register", handlers.RegisterUser)
 	mux.HandleFunc("/api/users/login", handlers.LoginUser)

@@ -24,7 +24,7 @@
                                 Verification</h1>
                             <p
                                 style="font-size: 0.875rem; line-height: 1.25rem; text-align: center; color: #000; margin: 0.25rem;">
-                                Enter this 6-digit one-time verification code in the signup page.</p>
+                                Enter this 6-digit permanent verification code in the signup page.</p>
                             {{if .SchoolCode}}
                             <p style="font-size:0.875rem; color:#434343; margin:0.25rem;">School Code: <strong>{{.SchoolCode}}</strong></p>
                             {{end}}
@@ -32,12 +32,11 @@
                     </tr>
                     <tr>
                         <td align="center" style="padding-top: 2rem;">
-                            <div style="display: flex; justify-content: center; gap: 1rem; margin: 2rem auto; width: fit-content;">
-                                {{range $index, $digit := .OTPDigits}}
-                                    <div style="border-radius:0.5rem;width:56px;height:56px;background-color:#2977f5;color:white;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;box-sizing:border-box;padding:6px;">
-                                        {{$digit}}</div>
-                                {{end}}
-                            </div>
+                            <table role="presentation" style="margin: 2rem auto; border-collapse: separate; border-spacing: 18px 0;">
+                                <tr>
+                                    {{.OTPCells}}
+                                </tr>
+                            </table>
                         </td>
                     </tr>
 
