@@ -266,6 +266,42 @@ body[data-page="complete"] input[type="checkbox"] {
     accent-color: var(--exun-blue);
 }
 
+/* Custom checkbox styling used in complete.html */
+.checkbox-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+.checkbox-wrapper .checkbox-input {
+    position: relative;
+    opacity: 0; /* hide native checkbox */
+    width: 18px;
+    height: 18px;
+}
+.checkbox-wrapper .checkbox-custom {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 2px solid rgba(56,58,60,0.12);
+    display: inline-block;
+    box-sizing: border-box;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.checkbox-wrapper .checkbox-input:checked + .checkbox-custom {
+    background: var(--exun-blue);
+    border-color: var(--exun-blue);
+    box-shadow: 0 0 0 3px rgba(41,119,245,0.08);
+}
+.checkbox-wrapper .checkbox-input:checked + .checkbox-custom::after {
+    content: '\2713';
+    color: #fff;
+    font-size: 12px;
+    display: block;
+    text-align: center;
+    line-height: 18px;
+}
+
 body[data-page="complete"] .login-form .login-btn {
     width: 100%;
     padding: 16px 20px;

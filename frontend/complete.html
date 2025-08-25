@@ -7,6 +7,7 @@
     <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/complete.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/css/intlTelInput.min.css" />
     <link rel="stylesheet" href="/css/toast.css">
 </head>
 <body data-page="complete">
@@ -24,14 +25,14 @@
                         <form class="login-form" id="complete-profile-form">
                             <div class="profile-grid">
                                 <div>
-                                    <div class="form-group">
-                                        <label class="form-label" for="fullname">Full name</label>
-                                        <input class="form-input" id="fullname" name="fullname" type="text" aria-describedby="err_fullname" value="{{if .User}}{{.User.Fullname}}{{end}}" />
-                                        <div class="form-error" id="err_fullname" aria-live="polite"></div>
-                                    </div>
+                                    <div class="form-group" id="fullname-field">
+                                            <label class="form-label" for="fullname">Full name</label>
+                                            <input class="form-input" id="fullname" name="fullname" type="text" aria-describedby="err_fullname" value="{{if .User}}{{.User.Fullname}}{{end}}" />
+                                            <div class="form-error" id="err_fullname" aria-live="polite"></div>
+                                        </div>
                                     <div class="form-group">
                                         <label class="form-label" for="phone_number">Phone number</label>
-                                        <input class="form-input" id="phone_number" name="phone_number" type="tel" aria-describedby="err_phone_number" value="{{if .User}}{{.User.PhoneNumber}}{{end}}" />
+                                        <input class="form-input" id="phone_number" name="phone_number" type="tel" inputmode="numeric" pattern="[0-9]*" placeholder="" aria-describedby="err_phone_number" value="{{if .User}}{{.User.PhoneNumber}}{{end}}" />
                                         <div class="form-error" id="err_phone_number" aria-live="polite"></div>
                                     </div>
                                     <div class="form-group" id="principal-email-field">
@@ -57,8 +58,11 @@
                                 </div>
                             </div>
                     <div class="form-group">
-                        <label class="form-label" for="individual">Individual</label>
-                                            <input type="checkbox" id="individual" name="individual" {{if .User}}{{if .User.Individual}}checked{{end}}{{end}} />
+                        <label class="form-label">Individual</label>
+                        <label class="checkbox-wrapper">
+                            <input type="checkbox" id="individual" name="individual" class="checkbox-input" {{if .User}}{{if .User.Individual}}checked{{end}}{{end}} />
+                            <span class="checkbox-custom" aria-hidden="true"></span>
+                        </label>
                     </div>
                             <div class="form-group button-row">
                                 <button class="login-btn" type="button" id="save-profile">Save profile</button>
@@ -75,7 +79,9 @@
 
     <script src="/js/api.js"></script>
     <script src="/js/utils.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js"></script>
     <script>
+        let iti = null;
         async function saveProfile() {
             const individualCheckbox = document.getElementById('individual');
             ['fullname','phone_number','principals_email'].forEach(id => {
@@ -83,9 +89,14 @@
                 if (el) el.textContent = '';
             });
 
+            const phoneEl = document.getElementById('phone_number');
+            const phoneVal = (iti && phoneEl) ? iti.getNumber() : (phoneEl ? phoneEl.value : '');
+            const phoneCountry = (iti && phoneEl) ? iti.getSelectedCountryData().iso2 : '';
+
             const payload = {
                 fullname: document.getElementById('fullname')?.value || '',
-                phone_number: document.getElementById('phone_number')?.value || '',
+                phone_number: phoneVal || '',
+                phone_country: phoneCountry || '',
                 principals_email: document.getElementById('principals_email')?.value || '',
                 individual: individualCheckbox ? individualCheckbox.checked : false,
                 institution_name: document.getElementById('institution_name')?.value || '',
@@ -98,15 +109,24 @@
             }
 
             let clientErr = false;
-            if (!payload.fullname.trim()) {
-                document.getElementById('err_fullname').textContent = 'Full name is required';
-                clientErr = true;
-            }
-            if (!/^[0-9]{10}$/.test(payload.phone_number.trim())) {
-                document.getElementById('err_phone_number').textContent = 'Enter a 10-digit phone number';
-                clientErr = true;
-            }
             const isInd = payload.individual === true;
+            if (isInd) {
+                if (!payload.fullname.trim()) {
+                    document.getElementById('err_fullname').textContent = 'Full name is required';
+                    clientErr = true;
+                }
+            }
+            if (iti && phoneEl) {
+                if (!iti.isValidNumber()) {
+                    document.getElementById('err_phone_number').textContent = 'Enter a valid phone number with country code';
+                    clientErr = true;
+                }
+            } else {
+                if (!/^[0-9]{10}$/.test(payload.phone_number.trim())) {
+                    document.getElementById('err_phone_number').textContent = 'Enter a 10-digit phone number';
+                    clientErr = true;
+                }
+            }
             if (!isInd) {
                 if (!payload.principals_email.trim()) {
                     document.getElementById('err_principals_email').textContent = "Principal's email is required for teams";
@@ -139,12 +159,62 @@
             const instField = document.getElementById('institution-field');
             const princField = document.getElementById('principal-name-field');
             const princEmailField = document.getElementById('principal-email-field');
+            const fullnameField = document.getElementById('fullname-field');
+            const phoneEl = document.getElementById('phone_number');
+
+            try {
+                if (phoneEl && window.intlTelInput) {
+                    iti = window.intlTelInput(phoneEl, {
+                        separateDialCode: true,
+                        preferredCountries: ['in','us','gb','ae','ca'],
+                        autoPlaceholder: 'off',
+                        utilsScript: 'https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/utils.js'
+                    });
+                    try { phoneEl.setAttribute('placeholder', ''); } catch (e) {}
+                }
+            } catch (e) {
+                console.warn('intl-tel-input not available', e);
+            }
+
+            try {
+                if (phoneEl) {
+                    phoneEl.addEventListener('input', (ev) => {
+                        const start = phoneEl.selectionStart || 0;
+                        const cleaned = phoneEl.value.replace(/(?!^\+)\D+/g, '');
+                        if (phoneEl.value !== cleaned) {
+                            phoneEl.value = cleaned;
+                            try { phoneEl.setSelectionRange(Math.max(start - 1, 0), Math.max(start - 1, 0)); } catch (_) {}
+                        }
+
+                        if (iti && phoneEl.value && phoneEl.value.startsWith('+')) {
+                            try { iti.setNumber(phoneEl.value); } catch (e) {}
+                        }
+                    });
+
+                    phoneEl.addEventListener('paste', (ev) => {
+                        try {
+                            const clip = (ev.clipboardData || window.clipboardData).getData('text') || '';
+                            ev.preventDefault();
+                            const m = clip.trim().match(/^\+?\d+/);
+                            const val = m ? m[0] : clip.replace(/\D+/g, '');
+                            phoneEl.value = val;
+                            phoneEl.dispatchEvent(new Event('input', { bubbles: true }));
+                            if (iti && phoneEl.value && phoneEl.value.startsWith('+')) {
+                                try { iti.setNumber(phoneEl.value); } catch (e) {}
+                            }
+                        } catch (e) {
+                        }
+                    });
+                }
+            } catch (e) {
+            }
 
             function toggleFields() {
                 const isInd = individualCheckbox ? individualCheckbox.checked : false;
                 if (instField) instField.style.display = isInd ? 'none' : 'block';
                 if (princField) princField.style.display = isInd ? 'none' : 'block';
                 if (princEmailField) princEmailField.style.display = isInd ? 'none' : 'block';
+                if (fullnameField) fullnameField.style.display = isInd ? 'block' : 'none';
                 const principalsEmail = document.getElementById('principals_email');
                 if (principalsEmail) principalsEmail.required = !isInd;
             }
