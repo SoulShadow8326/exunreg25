@@ -249,13 +249,6 @@ func GetAllEvents(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
-	if err != nil {
-		response := Response{Status: "error", Error: "Failed to retrieve events from DB"}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(response)
-		return
-	}
 
 	events := []map[string]interface{}{}
 	for _, ev := range eventsList {
