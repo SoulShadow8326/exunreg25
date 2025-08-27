@@ -83,9 +83,16 @@ class SummaryPage {
                     this.userProfile = this.userProfile || {};
                     this.userProfile.name = ui.fullname || this.userProfile.name || ui.username || this.userProfile.fullname;
                     this.userProfile.email = ui.email || this.userProfile.email;
-                    this.userProfile.school = ui.institution_name || this.userProfile.institution_name || this.userProfile.school;
-                    this.userProfile.class = ui.class || this.userProfile.class;
-                    this.userProfile.phone = ui.phone || this.userProfile.phone || ui.phone_number || this.userProfile.phone_number;
+                    this.userProfile.individual = !!ui.individual;
+                    if (ui.individual_info) {
+                        this.userProfile.phone = ui.individual_info.phone_number || ui.individual_info.phone || this.userProfile.phone;
+                        this.userProfile.address = ui.individual_info.address || this.userProfile.address;
+                    } else {
+                        this.userProfile.phone = ui.phone || this.userProfile.phone || ui.phone_number || this.userProfile.phone_number;
+                        this.userProfile.address = ui.address || this.userProfile.address;
+                        this.userProfile.school = ui.institution_name || this.userProfile.institution_name || this.userProfile.school;
+                        this.userProfile.class = ui.class || this.userProfile.class;
+                    }
                 }
             } catch (e) { console.error('SummaryPage.loadData: error reading summary response', e); }
         } else {
@@ -98,7 +105,7 @@ class SummaryPage {
             Utils.showToast('Failed to load summary data', 'error');
             const msg = (err && err.message) ? err.message.toLowerCase() : '';
             if (msg.includes('complete signup')) {
-                setTimeout(() => window.location.href = '/complete_signup', 1000);
+                setTimeout(() => window.location.href = '/complete', 1000);
                 return;
             }
             if (msg.includes('user not found')) {
@@ -151,30 +158,40 @@ class SummaryPage {
             return;
         }
 
-        const institution = this.userProfile.institution_name || this.userProfile.InstitutionName || this.userProfile.institution || this.userProfile.school || '';
+        const name = this.userProfile.name || this.userProfile.fullname || this.userProfile.username || '';
+        const email = this.userProfile.email || '';
+        const phone = this.userProfile.phone || this.userProfile.phone_number || '';
         const address = this.userProfile.address || this.userProfile.Address || '';
-        const schoolCode = this.userProfile.school_code || this.userProfile.SchoolCode || this.userProfile.schoolCode || '';
-        const principalName = this.userProfile.principals_name || this.userProfile.PrincipalsName || this.userProfile.principalsName || '';
-        const principalEmail = this.userProfile.principals_email || this.userProfile.PrincipalsEmail || this.userProfile.principalsEmail || '';
 
-        profileContainer.innerHTML = `
+        const individualCard = `
             <div class="profile-card">
-                <h4 class="profile-card__title">School Information</h4>
+                <h4 class="profile-card__title">Individual Information</h4>
                 <div class="registration-card__details">
                     <div class="registration-detail">
-                        <span class="registration-detail__label">Institution:</span>
-                        <span class="registration-detail__value">${institution || 'Not provided'}</span>
+                        <span class="registration-detail__label">Name:</span>
+                        <span class="registration-detail__value">${name || 'Not provided'}</span>
+                    </div>
+                    <div class="registration-detail">
+                        <span class="registration-detail__label">Email:</span>
+                        <span class="registration-detail__value">${email || 'Not provided'}</span>
+                    </div>
+                    <div class="registration-detail">
+                        <span class="registration-detail__label">Phone:</span>
+                        <span class="registration-detail__value">${phone || 'Not provided'}</span>
                     </div>
                     <div class="registration-detail">
                         <span class="registration-detail__label">Address:</span>
                         <span class="registration-detail__value">${address || 'Not provided'}</span>
                     </div>
-                    <div class="registration-detail">
-                        <span class="registration-detail__label">School Code:</span>
-                        <span class="registration-detail__value">${schoolCode || 'Not provided'}</span>
-                    </div>
                 </div>
             </div>
+        `;
+
+        const principalName = this.userProfile.principals_name || this.userProfile.PrincipalsName || this.userProfile.principalsName || '';
+        const principalEmail = this.userProfile.principals_email || this.userProfile.PrincipalsEmail || this.userProfile.principalsEmail || '';
+        let principalCard = '';
+        if (!this.userProfile.individual && (principalName || principalEmail)) {
+            principalCard = `
             <div class="profile-card">
                 <h4 class="profile-card__title">Principal</h4>
                 <div class="registration-card__details">
@@ -189,6 +206,9 @@ class SummaryPage {
                 </div>
             </div>
         `;
+        }
+
+        profileContainer.innerHTML = individualCard + principalCard;
     }
 
     renderRegistrations() {
@@ -659,7 +679,7 @@ class SummaryPage {
     }
 
     editProfile() {
-    window.location.href = '/signup';
+    window.location.href = '/complete';
     }
 
     async handleLogout() {

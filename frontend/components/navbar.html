@@ -1,7 +1,7 @@
 {{define "navbar"}}
-<nav class="navbar">
+<nav class="navbar" role="navigation" aria-label="Main navigation">
     <div class="navbar__brand">
-        <a href="/">
+        <a href="/" class="navbar__brand-link">
             <img class="navbar__logo" src="/assets/exun.png" alt="Exun Clan" />
         </a>
     </div>
@@ -13,7 +13,7 @@
 
         
 
-        <div data-nav="auth">
+    <div data-nav="auth">
             {{if .IsAuthenticated}}
             <a href="/summary" class="navbar__link">Registration Summary</a>
             <button class="btn btn--primary navbar__link" data-action="logout">Logout</button>

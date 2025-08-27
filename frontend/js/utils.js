@@ -187,3 +187,71 @@ function escapeHtml(str) {
 }
 
 window.Utils.escapeHtml = escapeHtml;
+
+function showConfirmModal(message, title = 'Confirm', confirmText = 'Confirm', cancelText = 'Cancel') {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.inset = '0';
+        overlay.style.background = 'rgba(0,0,0,0.35)';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.zIndex = 9999;
+        overlay.tabIndex = 0;
+
+        const box = document.createElement('div');
+        box.style.background = '#fff';
+        box.style.borderRadius = '10px';
+        box.style.padding = '20px';
+        box.style.maxWidth = '480px';
+        box.style.width = '92%';
+        box.style.boxShadow = '0 20px 60px rgba(2,6,23,0.2)';
+        box.style.fontFamily = "'Raleway', sans-serif";
+
+        const titleEl = document.createElement('div');
+        titleEl.style.fontSize = '16px';
+        titleEl.style.fontWeight = '700';
+        titleEl.style.marginBottom = '8px';
+        titleEl.textContent = title || 'Confirm';
+
+        const desc = document.createElement('div');
+        desc.style.fontSize = '14px';
+        desc.style.color = '#374151';
+        desc.style.marginBottom = '16px';
+        desc.textContent = message || '';
+
+        const actions = document.createElement('div');
+        actions.style.display = 'flex';
+        actions.style.justifyContent = 'flex-end';
+        actions.style.gap = '10px';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn btn--secondary';
+        cancelBtn.textContent = cancelText || 'Cancel';
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className = 'btn btn--primary';
+        confirmBtn.textContent = confirmText || 'Confirm';
+
+        actions.appendChild(cancelBtn);
+        actions.appendChild(confirmBtn);
+
+        box.appendChild(titleEl);
+        box.appendChild(desc);
+        box.appendChild(actions);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+
+        const cleanup = () => { overlay.removeEventListener('keydown', onKeyDown); overlay.remove(); };
+        const onKeyDown = (ev) => { if (ev.key === 'Escape') { cleanup(); resolve(false); } if (ev.key === 'Enter') { cleanup(); resolve(true); } };
+        cancelBtn.addEventListener('click', () => { cleanup(); resolve(false); });
+        confirmBtn.addEventListener('click', () => { cleanup(); resolve(true); });
+        overlay.addEventListener('click', (ev) => { if (ev.target === overlay) { cleanup(); resolve(false); } });
+        overlay.addEventListener('keydown', onKeyDown);
+        setTimeout(() => { overlay.focus(); cancelBtn.focus(); }, 10);
+    });
+}
+
+if (window && window.Utils) {
+    window.Utils.showConfirmModal = showConfirmModal;
+}

@@ -183,7 +183,7 @@ class EventDetailPage {
             }
             const user = profileResp.data;
             if (!user) {
-                Utils.redirect('/complete_signup', 100);
+                Utils.redirect('/complete', 100);
                 return;
             }
 
@@ -270,8 +270,8 @@ class EventDetailPage {
         const clearBtn = row.querySelector('.btn-inline-clear');
             clearBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
-                if (rows.length <= 1) {
-                    const confirmed = confirm('This will delete your registration for this event. Continue?');
+                    if (rows.length <= 1) {
+                    const confirmed = await (window.Utils && window.Utils.showConfirmModal ? window.Utils.showConfirmModal('Delete registration? This will permanently remove your registration for this event. Continue?', 'Delete registration', 'Delete', 'Cancel') : Promise.resolve(confirm('Delete registration? This will permanently remove your registration for this event. Continue?')));
                     if (!confirmed) return;
                     try {
                         const resp = await fetch('/api/submit_registrations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ id: eventId, action: 'delete' }) });

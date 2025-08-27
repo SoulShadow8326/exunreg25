@@ -108,44 +108,105 @@ func SetupRoutes() *http.ServeMux {
 		case "/", "/index":
 			data := getTemplateData(r)
 			data.PageTitle = "Exun 2025"
-			if events, err := templates.LoadEventsFromJSON(); err == nil {
-				data.Events = events
-				cats := make(map[string]struct{})
-				for _, e := range events {
-					if e.Slug != "" {
-						if strings.Contains(e.Name, "Build") {
-							cats["build"] = struct{}{}
+			email := middleware.GetEmailFromCookie(r)
+			if email != "" {
+				if evs, err := handlers.GetAllEventsForUser(email); err == nil {
+					tmplEvents := make([]templates.Event, 0, len(evs))
+					for _, ev := range evs {
+						img := ev.Image
+						if !strings.HasPrefix(img, "/") {
+							img = "/illustrations/" + img
 						}
-						if strings.Contains(e.Name, "CubXL") {
-							cats["cubing"] = struct{}{}
-						}
+						tmplEvents = append(tmplEvents, templates.Event{
+							ID:               ev.ID,
+							Name:             ev.Name,
+							Slug:             ev.ID,
+							Image:            img,
+							Mode:             ev.Mode,
+							Participants:     ev.Participants,
+							MaxParticipants:  0,
+							IsRegistered:     false,
+							DescriptionShort: ev.DescriptionShort,
+							DescriptionLong:  ev.DescriptionLong,
+							EligibilityText:  ev.Eligibility,
+							Points:           ev.Points,
+							Individual:       ev.IndependentRegistration,
+							Dates:            ev.Dates,
+						})
+					}
+					data.Events = tmplEvents
+				}
+			} else {
+				if events, err := templates.LoadEventsFromJSON(); err == nil {
+					data.Events = events
+				}
+			}
+			events := data.Events
+			cats := make(map[string]struct{})
+			for _, e := range events {
+				if e.Slug != "" {
+					if strings.Contains(e.Name, "Build") {
+						cats["build"] = struct{}{}
+					}
+					if strings.Contains(e.Name, "CubXL") {
+						cats["cubing"] = struct{}{}
 					}
 				}
-				for k := range cats {
-					data.Categories = append(data.Categories, templates.Category{Key: k, Name: strings.Title(k)})
-				}
+			}
+			for k := range cats {
+				data.Categories = append(data.Categories, templates.Category{Key: k, Name: strings.Title(k)})
 			}
 			templates.RenderTemplate(w, "index", data)
 			return
 		case "/events":
 			data := getTemplateData(r)
 			data.PageTitle = "Events | Exun 2025"
-			if events, err := templates.LoadEventsFromJSON(); err == nil {
-				data.Events = events
-				cats := make(map[string]struct{})
-				for _, e := range events {
-					if e.Slug != "" {
-						if strings.Contains(e.Name, "Build") {
-							cats["build"] = struct{}{}
+			email := middleware.GetEmailFromCookie(r)
+			if email != "" {
+				if evs, err := handlers.GetAllEventsForUser(email); err == nil {
+					tmplEvents := make([]templates.Event, 0, len(evs))
+					for _, ev := range evs {
+						img := ev.Image
+						if !strings.HasPrefix(img, "/") {
+							img = "/illustrations/" + img
 						}
-						if strings.Contains(e.Name, "CubXL") {
-							cats["cubing"] = struct{}{}
-						}
+						tmplEvents = append(tmplEvents, templates.Event{
+							ID:               ev.ID,
+							Name:             ev.Name,
+							Slug:             ev.ID,
+							Image:            img,
+							Mode:             ev.Mode,
+							Participants:     ev.Participants,
+							MaxParticipants:  0,
+							IsRegistered:     false,
+							DescriptionShort: ev.DescriptionShort,
+							DescriptionLong:  ev.DescriptionLong,
+							EligibilityText:  ev.Eligibility,
+							Points:           ev.Points,
+							Individual:       ev.IndependentRegistration,
+							Dates:            ev.Dates,
+						})
+					}
+					data.Events = tmplEvents
+				}
+			} else {
+				if events, err := templates.LoadEventsFromJSON(); err == nil {
+					data.Events = events
+				}
+			}
+			cats := make(map[string]struct{})
+			for _, e := range data.Events {
+				if e.Slug != "" {
+					if strings.Contains(e.Name, "Build") {
+						cats["build"] = struct{}{}
+					}
+					if strings.Contains(e.Name, "CubXL") {
+						cats["cubing"] = struct{}{}
 					}
 				}
-				for k := range cats {
-					data.Categories = append(data.Categories, templates.Category{Key: k, Name: strings.Title(k)})
-				}
+			}
+			for k := range cats {
+				data.Categories = append(data.Categories, templates.Category{Key: k, Name: strings.Title(k)})
 			}
 			templates.RenderTemplate(w, "events", data)
 			return
@@ -235,17 +296,12 @@ func SetupRoutes() *http.ServeMux {
 			}
 			templates.RenderTemplate(w, "summary", data)
 			return
-		case "/signup":
-			if !middleware.IsAuthenticated(r) {
+		case "/complete":
+			data := getTemplateData(r)
+			if !data.IsAuthenticated {
 				http.Redirect(w, r, "/login", http.StatusSeeOther)
 				return
 			}
-			data := getTemplateData(r)
-			data.PageTitle = "Complete Signup | Exun 2025"
-			templates.RenderTemplate(w, "complete", data)
-			return
-		case "/complete":
-			data := getTemplateData(r)
 			data.PageTitle = "Complete Signup | Exun 2025"
 			templates.RenderTemplate(w, "complete", data)
 			return
@@ -356,6 +412,25 @@ func SetupRoutes() *http.ServeMux {
 	mux.Handle("/api/admin/send-invite", middleware.AuthRequired(adminSendInviteHandler))
 	adminImportEventsHandler := http.HandlerFunc(handlers.ImportEvents)
 	mux.Handle("/api/admin/import_events", middleware.AuthRequired(adminImportEventsHandler))
+
+	mux.HandleFunc("/admin", func(w http.ResponseWriter, r *http.Request) {
+		data := getTemplateData(r)
+		if !data.IsAuthenticated || !data.IsAdmin {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		data.PageTitle = "Admin | Exun 2025"
+		templates.RenderTemplate(w, "admin", data)
+	})
+	mux.HandleFunc("/admin/", func(w http.ResponseWriter, r *http.Request) {
+		data := getTemplateData(r)
+		if !data.IsAuthenticated || !data.IsAdmin {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		data.PageTitle = "Admin | Exun 2025"
+		templates.RenderTemplate(w, "admin", data)
+	})
 
 	return mux
 }

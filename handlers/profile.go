@@ -5,6 +5,7 @@ import (
 	"exunreg25/db"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -14,6 +15,7 @@ type CompleteSignupRequest struct {
 	PhoneNumber     string `json:"phone_number"`
 	PrincipalsEmail string `json:"principals_email"`
 	Individual      *bool  `json:"individual"`
+	UserEmail       string `json:"user_email"`
 	InstitutionName string `json:"institution_name"`
 	Address         string `json:"address"`
 	PrincipalsName  string `json:"principals_name"`
@@ -177,10 +179,49 @@ func CompleteSignupAPI(w http.ResponseWriter, r *http.Request) {
 	user.Fullname = strings.TrimSpace(strings.ToUpper(req.Fullname))
 	user.PhoneNumber = strings.TrimSpace(req.PhoneNumber)
 	user.PrincipalsEmail = strings.TrimSpace(req.PrincipalsEmail)
+	prevIndividual := user.Individual
 	if req.Individual != nil && *req.Individual {
 		user.Individual = true
 	} else {
 		user.Individual = false
+	}
+	userEmailTrim := strings.TrimSpace(req.UserEmail)
+	if userEmailTrim == "" {
+		userEmailTrim = email
+	}
+	if user.Individual {
+		if !prevIndividual {
+			if user.Registrations != nil {
+				user.Registrations = make(map[string][]db.Participant)
+			}
+			if regs, err := globalDB.GetAll("registrations"); err == nil {
+				for _, rr := range regs {
+					if r, ok := rr.(*db.Registration); ok {
+						if r.UserID == user.ID {
+							_ = globalDB.Delete("registrations", strconv.Itoa(r.ID))
+						}
+					}
+				}
+			}
+		}
+
+		_ = globalDB.Delete("individual_registrations_by_user", strconv.Itoa(user.ID))
+		ir := &db.IndividualRegistration{
+			UserID:    user.ID,
+			Fullname:  user.Fullname,
+			UserEmail: userEmailTrim,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+		_ = globalDB.Create("individual_registrations", ir)
+		user.InstitutionName = ""
+		user.SchoolCode = ""
+		user.PrincipalsName = ""
+		user.PrincipalsEmail = ""
+	} else {
+		if prevIndividual {
+			_ = globalDB.Delete("individual_registrations_by_user", strconv.Itoa(user.ID))
+		}
 	}
 	user.InstitutionName = strings.TrimSpace(strings.ToUpper(req.InstitutionName))
 	user.Address = strings.TrimSpace(strings.ToUpper(req.Address))
@@ -357,27 +398,45 @@ func GetUserRegistrationHistory(w http.ResponseWriter, r *http.Request) {
 }
 
 func validateCompleteSignupRequest(req CompleteSignupRequest) error {
-	if strings.TrimSpace(req.Fullname) == "" {
-		return fmt.Errorf("fullname is required")
-	}
-	if strings.TrimSpace(req.PhoneNumber) == "" {
-		return fmt.Errorf("phone number is required")
+	if req.Individual != nil && *req.Individual {
+		if strings.TrimSpace(req.Fullname) == "" {
+			return fmt.Errorf("fullname is required")
+		}
 	}
 	if req.Individual == nil {
 		return fmt.Errorf("individual field is required")
 	}
-	if strings.TrimSpace(req.InstitutionName) == "" {
-		return fmt.Errorf("institution name is required")
-	}
-	if strings.TrimSpace(req.Address) == "" {
-		return fmt.Errorf("address is required")
-	}
-	if strings.TrimSpace(req.PrincipalsName) == "" {
-		return fmt.Errorf("principal's name is required")
+
+	if req.Individual != nil && !*req.Individual {
+		if strings.TrimSpace(req.InstitutionName) == "" {
+			return fmt.Errorf("institution name is required")
+		}
+		if strings.TrimSpace(req.Address) == "" {
+			return fmt.Errorf("address is required")
+		}
+		if strings.TrimSpace(req.PrincipalsName) == "" {
+			return fmt.Errorf("principal's name is required")
+		}
 	}
 
-	if len(req.PhoneNumber) != 10 {
-		return fmt.Errorf("phone number must be 10 digits")
+	if strings.TrimSpace(req.PhoneNumber) == "" {
+		return fmt.Errorf("phone number is required")
+	}
+
+	digitsOnly := ""
+	for _, r := range req.PhoneNumber {
+		if r >= '0' && r <= '9' {
+			digitsOnly += string(r)
+		}
+	}
+	if strings.HasPrefix(strings.TrimSpace(req.PhoneNumber), "+") {
+		if len(digitsOnly) < 10 || len(digitsOnly) > 15 {
+			return fmt.Errorf("phone number must be between 10 and 15 digits when using international format")
+		}
+	} else {
+		if len(digitsOnly) != 10 {
+			return fmt.Errorf("phone number must be 10 digits")
+		}
 	}
 
 	if req.Individual != nil && !*req.Individual {
@@ -402,6 +461,18 @@ func getUserRegistrations(userID int) (map[string]interface{}, error) {
 	for _, regData := range registrations {
 		reg := regData.(*db.Registration)
 		if reg.UserID == userID {
+			if uIface, uerr := globalDB.Get("users", strconv.Itoa(userID)); uerr == nil {
+				if u, ok := uIface.(*db.User); ok && u.Individual {
+					evt, eerr := globalDB.Get("events", reg.EventID)
+					if eerr == nil {
+						if ev, ok2 := evt.(*db.Event); ok2 {
+							if !ev.IndependentRegistration {
+								continue
+							}
+						}
+					}
+				}
+			}
 			eventData, err := globalDB.Get("events", reg.EventID)
 			if err != nil {
 				continue

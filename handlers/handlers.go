@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -101,13 +104,89 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
-	response := Response{
-		Status: "error",
-		Error:  "Password-based login is deprecated. Please use OTP-based authentication via /api/auth/send-otp and /api/auth/verify-otp.",
+	var req struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response := Response{Status: "error", Error: "Invalid request body"}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	if req.Email == "" || req.Password == "" {
+		response := Response{Status: "error", Error: "Email and password required"}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	userIface, err := globalDB.Get("users", req.Email)
+	if err != nil || userIface == nil {
+		response := Response{Status: "error", Error: "Invalid email or password"}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	user := userIface.(*db.User)
+	if user.PasswordHash == "" {
+		response := Response{Status: "error", Error: "Password login not configured for this account"}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	salt := ""
+	if s := os.Getenv("AUTH_SALT"); s != "" {
+		salt = s
+	}
+	h := sha256.Sum256([]byte(salt + req.Password))
+	hashed := hex.EncodeToString(h[:])
+
+	if hashed != user.PasswordHash {
+		response := Response{Status: "error", Error: "Invalid email or password"}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	tokenData := req.Email + salt
+	tokenHash := sha256.Sum256([]byte(tokenData))
+	authToken := hex.EncodeToString(tokenHash[:])
+
+	cookieSecure := false
+	if os.Getenv("COOKIE_SECURE") == "true" {
+		cookieSecure = true
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "email",
+		Value:    req.Email,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   cookieSecure,
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Now().Add(24 * time.Hour),
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name:     "auth_token",
+		Value:    authToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   cookieSecure,
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Now().Add(24 * time.Hour),
+	})
+
+	response := Response{Status: "success", Message: "Logged in", Data: map[string]interface{}{"email": req.Email, "token": authToken}}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusNotImplemented)
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -158,7 +237,18 @@ func GetAllEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	eventsRaw, err := globalDB.GetAll("events")
+	email := ""
+	if c, err := r.Cookie("email"); err == nil {
+		email = c.Value
+	}
+	eventsList, err := GetAllEventsForUser(email)
+	if err != nil {
+		response := Response{Status: "error", Error: "Failed to retrieve events from DB"}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
 	if err != nil {
 		response := Response{Status: "error", Error: "Failed to retrieve events from DB"}
 		w.Header().Set("Content-Type", "application/json")
@@ -168,25 +258,23 @@ func GetAllEvents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	events := []map[string]interface{}{}
-	for _, e := range eventsRaw {
-		if ev, ok := e.(*db.Event); ok {
-			event := map[string]interface{}{
-				"id":                ev.ID,
-				"name":              ev.Name,
-				"image":             ev.Image,
-				"slug":              ev.ID,
-				"description_short": ev.DescriptionShort,
-				"description_long":  ev.DescriptionLong,
-				"participants":      ev.Participants,
-				"mode":              ev.Mode,
-				"points":            ev.Points,
-				"individual":        ev.IndependentRegistration,
-				"eligibility":       ev.Eligibility,
-				"open_to_all":       ev.OpenToAll,
-				"dates":             ev.Dates,
-			}
-			events = append(events, event)
+	for _, ev := range eventsList {
+		event := map[string]interface{}{
+			"id":                ev.ID,
+			"name":              ev.Name,
+			"image":             ev.Image,
+			"slug":              ev.ID,
+			"description_short": ev.DescriptionShort,
+			"description_long":  ev.DescriptionLong,
+			"participants":      ev.Participants,
+			"mode":              ev.Mode,
+			"points":            ev.Points,
+			"individual":        ev.IndependentRegistration,
+			"eligibility":       ev.Eligibility,
+			"open_to_all":       ev.OpenToAll,
+			"dates":             ev.Dates,
 		}
+		events = append(events, event)
 	}
 
 	response := Response{Status: "success", Message: "Events retrieved successfully", Data: events}
@@ -292,4 +380,29 @@ func GetAllEventsData() ([]db.Event, error) {
 		}
 	}
 	return events, nil
+}
+
+func GetAllEventsForUser(email string) ([]db.Event, error) {
+	events, err := GetAllEventsData()
+	if err != nil {
+		return nil, err
+	}
+	if email == "" {
+		return events, nil
+	}
+	uIface, err := globalDB.Get("users", email)
+	if err != nil || uIface == nil {
+		return events, nil
+	}
+	user := uIface.(*db.User)
+	if !user.Individual {
+		return events, nil
+	}
+	filtered := make([]db.Event, 0, len(events))
+	for _, ev := range events {
+		if ev.IndependentRegistration {
+			filtered = append(filtered, ev)
+		}
+	}
+	return filtered, nil
 }

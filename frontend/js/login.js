@@ -152,17 +152,21 @@ constructor() {
     async handleRegister(email, schoolCode) {
         this.currentEmail = email;
         try {
-            const response = await ExunServices.api.apiRequest('/auth/send-otp', {
-                method: 'POST',
-                    body: JSON.stringify({ email })
-            });
-            
-            if (response.status === 'success') {
+            const response = await ExunServices.auth.sendOTP(email);
+            if (response.success) {
                 this.showOTPForm();
-                Utils.showToast('OTP sent to your email', 'success');
+                Utils.showToast(response.message || 'OTP sent to your email', 'success');
                 this.startResendTimer();
+            } else if (response.type === 'user_exists') {
+                Utils.showToast(response.message || 'Account exists — please sign in', 'info');
+                this.authMode = 'login';
+                this.updateUI();
+                const emailEl = document.getElementById('email');
+                if (emailEl) emailEl.value = email;
+                const pwdEl = document.getElementById('password');
+                if (pwdEl) pwdEl.focus();
             } else {
-                throw new Error(response.error || 'Failed to send OTP');
+                throw new Error(response.message || 'Failed to send OTP');
             }
         } catch (error) {
             throw new Error(error.message || 'Failed to send OTP');
@@ -237,7 +241,7 @@ constructor() {
             const response = await ExunServices.api.apiRequest('/auth/complete', { method: 'POST', body: JSON.stringify({ username: this.currentEmail, password: pwd }) });
             if (response.status === 'success') {
                 Utils.showToast('Signup complete. Redirecting to profile completion...', 'success');
-                setTimeout(() => window.location.href = '/signup', 800);
+                setTimeout(() => window.location.href = '/complete', 800);
             } else {
                 Utils.showToast(response.error || 'Failed to set password', 'error');
             }
@@ -252,11 +256,18 @@ constructor() {
         
         try {
             const response = await ExunServices.auth.sendOTP(this.currentEmail);
-            
             if (response.success) {
                 Utils.showToast('New OTP sent to your email', 'success');
                 this.startResendTimer();
                 this.clearOTPInputs();
+            } else if (response.type === 'user_exists') {
+                Utils.showToast(response.message || 'Account exists — please sign in', 'info');
+                this.authMode = 'login';
+                this.updateUI();
+                const emailEl = document.getElementById('email');
+                if (emailEl) emailEl.value = this.currentEmail;
+                const pwdEl = document.getElementById('password');
+                if (pwdEl) pwdEl.focus();
             } else {
                 throw new Error(response.message || 'Failed to resend OTP');
             }

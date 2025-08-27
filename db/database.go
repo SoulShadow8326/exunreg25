@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -110,6 +111,15 @@ type Registration struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type IndividualRegistration struct {
+	ID        int       `json:"id"`
+	UserID    int       `json:"user_id"`
+	Fullname  string    `json:"fullname"`
+	UserEmail string    `json:"user_email"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 func NewConnection(dbPath string) (*Database, error) {
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
@@ -197,6 +207,21 @@ func (db *Database) InitTables() error {
 		return fmt.Errorf("error creating registrations table: %v", err)
 	}
 
+	createIndividualRegistrationsTable := `
+	CREATE TABLE IF NOT EXISTS individual_registrations (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL,
+		fullname TEXT,
+		user_email TEXT,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (user_id) REFERENCES users (id)
+	);`
+
+	if _, err := db.Exec(createIndividualRegistrationsTable); err != nil {
+		return fmt.Errorf("error creating individual_registrations table: %v", err)
+	}
+
 	if _, err := db.Exec(createIndexes); err != nil {
 		return fmt.Errorf("error creating indexes: %v", err)
 	}
@@ -263,6 +288,28 @@ func (db *Database) Get(entity string, key string) (interface{}, error) {
 		}
 		return reg, nil
 
+	case "individual_registrations":
+		query := `SELECT id, user_id, fullname, user_email, created_at, updated_at FROM individual_registrations WHERE id = ?`
+		ir := &IndividualRegistration{}
+		err := db.QueryRow(query, key).Scan(&ir.ID, &ir.UserID, &ir.Fullname, &ir.UserEmail, &ir.CreatedAt, &ir.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		return ir, nil
+
+	case "individual_registrations_by_user":
+		uid, err := strconv.Atoi(key)
+		if err != nil {
+			return nil, fmt.Errorf("invalid user id: %v", err)
+		}
+		query := `SELECT id, user_id, fullname, user_email, created_at, updated_at FROM individual_registrations WHERE user_id = ? LIMIT 1`
+		ir := &IndividualRegistration{}
+		err = db.QueryRow(query, uid).Scan(&ir.ID, &ir.UserID, &ir.Fullname, &ir.UserEmail, &ir.CreatedAt, &ir.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		return ir, nil
+
 	default:
 		return nil, fmt.Errorf("unknown entity: %s", entity)
 	}
@@ -313,6 +360,18 @@ func (db *Database) Create(entity string, data interface{}) error {
 		_, err := db.Exec(query, reg.EventID, reg.UserID, reg.TeamName, reg.Status, now, now)
 		if err != nil {
 			log.Printf("db.Create(registrations) error: %v", err)
+		}
+		return err
+
+	case "individual_registrations":
+		ir, ok := data.(*IndividualRegistration)
+		if !ok {
+			return fmt.Errorf("invalid individual registration data")
+		}
+		query := `INSERT INTO individual_registrations (user_id, fullname, user_email, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`
+		_, err := db.Exec(query, ir.UserID, ir.Fullname, ir.UserEmail, now, now)
+		if err != nil {
+			log.Printf("db.Create(individual_registrations) error: %v", err)
 		}
 		return err
 
@@ -369,6 +428,18 @@ func (db *Database) Update(entity string, key string, data interface{}) error {
 		}
 		return err
 
+	case "individual_registrations":
+		ir, ok := data.(*IndividualRegistration)
+		if !ok {
+			return fmt.Errorf("invalid individual registration data")
+		}
+		query := `UPDATE individual_registrations SET user_id = ?, fullname = ?, user_email = ?, updated_at = ? WHERE id = ?`
+		_, err := db.Exec(query, ir.UserID, ir.Fullname, ir.UserEmail, now, key)
+		if err != nil {
+			log.Printf("db.Update(individual_registrations) error: %v", err)
+		}
+		return err
+
 	default:
 		return fmt.Errorf("unknown entity: %s", entity)
 	}
@@ -389,6 +460,20 @@ func (db *Database) Delete(entity string, key string) error {
 	case "registrations":
 		query := `DELETE FROM registrations WHERE id = ?`
 		_, err := db.Exec(query, key)
+		return err
+
+	case "individual_registrations":
+		query := `DELETE FROM individual_registrations WHERE id = ?`
+		_, err := db.Exec(query, key)
+		return err
+
+	case "individual_registrations_by_user":
+		uid, err := strconv.Atoi(key)
+		if err != nil {
+			return fmt.Errorf("invalid user id: %v", err)
+		}
+		query := `DELETE FROM individual_registrations WHERE user_id = ?`
+		_, err = db.Exec(query, uid)
 		return err
 
 	default:
@@ -465,6 +550,25 @@ func (db *Database) GetAll(entity string) ([]interface{}, error) {
 			registrations = append(registrations, reg)
 		}
 		return registrations, nil
+
+	case "individual_registrations":
+		query := `SELECT id, user_id, fullname, user_email, created_at, updated_at FROM individual_registrations`
+		rows, err := db.Query(query)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		var irs []interface{}
+		for rows.Next() {
+			ir := &IndividualRegistration{}
+			err := rows.Scan(&ir.ID, &ir.UserID, &ir.Fullname, &ir.UserEmail, &ir.CreatedAt, &ir.UpdatedAt)
+			if err != nil {
+				return nil, err
+			}
+			irs = append(irs, ir)
+		}
+		return irs, nil
 
 	default:
 		return nil, fmt.Errorf("unknown entity: %s", entity)

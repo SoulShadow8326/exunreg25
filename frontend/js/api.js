@@ -119,7 +119,11 @@ window.ExunServices.auth = {
             const resp = await window.ExunServices.api.apiRequest('/auth/send-otp', { method: 'POST', body: JSON.stringify({ email }) });
             return { success: true, message: resp.message || 'OTP sent', data: resp.data };
         } catch (err) {
-            return { success: false, message: err.message || 'Failed to send OTP' };
+            const msg = (err && err.message) ? err.message : 'Failed to send OTP';
+            if (msg.toLowerCase().includes('user already exists')) {
+                return { success: false, type: 'user_exists', message: 'An account with this email already exists. Please sign in.' };
+            }
+            return { success: false, message: msg };
         }
     }
 };

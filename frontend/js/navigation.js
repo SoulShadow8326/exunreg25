@@ -18,7 +18,7 @@ class Navigation {
                     this.currentUser = response.data;
                 } else {
                     if (response && response.error === 'Complete signup required') {
-                        window.location.href = '/complete_signup';
+                        window.location.href = '/complete';
                         return;
                     }
                     ExunServices.api.clearAuthToken();
@@ -128,28 +128,85 @@ class Navigation {
 
         const toggleBtn = document.createElement('button');
         toggleBtn.className = 'navbar__toggle';
-        toggleBtn.innerHTML = '☰';
         toggleBtn.setAttribute('aria-label', 'Toggle navigation');
-        
+        toggleBtn.setAttribute('aria-expanded', 'false');
+
+        const svgMenu = `
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="24px" height="24px" viewBox="0 0 24 24" version="1.1" aria-hidden="true">
+    <title>Menu</title>
+    <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g>
+            <rect fill-rule="nonzero" x="0" y="0" width="24" height="24"></rect>
+            <line x1="5" y1="7" x2="19" y2="7" stroke="#0C0310" stroke-width="2" stroke-linecap="round"></line>
+            <line x1="5" y1="12" x2="19" y2="12" stroke="#0C0310" stroke-width="2" stroke-linecap="round"></line>
+            <line x1="5" y1="17" x2="19" y2="17" stroke="#0C0310" stroke-width="2" stroke-linecap="round"></line>
+        </g>
+    </g>
+</svg>`;
+
         let isOpen = false;
-        
-        toggleBtn.addEventListener('click', () => {
-            isOpen = !isOpen;
-            nav.style.display = isOpen ? 'flex' : 'none';
-            toggleBtn.innerHTML = isOpen ? '✕' : '☰';
+
+        toggleBtn.innerHTML = svgMenu;
+
+        nav.setAttribute('aria-hidden', 'true');
+        nav.classList.remove('open');
+
+        const openMenu = () => {
+            isOpen = true;
+            nav.classList.add('open');
+            nav.setAttribute('aria-hidden', 'false');
+            toggleBtn.setAttribute('aria-expanded', 'true');
+            toggleBtn.innerHTML = '✕';
+            document.addEventListener('click', outsideClickListener);
+            document.addEventListener('keydown', escapeListener);
+        };
+
+        const closeMenu = () => {
+            isOpen = false;
+            nav.classList.remove('open');
+            nav.setAttribute('aria-hidden', 'true');
+            toggleBtn.setAttribute('aria-expanded', 'false');
+            toggleBtn.innerHTML = svgMenu;
+            document.removeEventListener('click', outsideClickListener);
+            document.removeEventListener('keydown', escapeListener);
+        };
+
+        const outsideClickListener = (e) => {
+            if (!navbar.contains(e.target)) {
+                closeMenu();
+            }
+        };
+
+        const escapeListener = (e) => {
+            if (e.key === 'Escape' || e.key === 'Esc') {
+                closeMenu();
+            }
+        };
+
+        toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (isOpen) closeMenu(); else openMenu();
         });
 
-        navbar.insertBefore(toggleBtn, nav);
-        nav.style.display = 'none';
+        navbar.appendChild(toggleBtn);
+        const handleResize = () => {
+            if (!Utils.isMobile()) {
+                nav.classList.remove('open');
+                nav.removeAttribute('aria-hidden');
+                toggleBtn.style.display = 'none';
+                toggleBtn.setAttribute('aria-expanded', 'false');
+            } else {
+                nav.classList.remove('open');
+                nav.setAttribute('aria-hidden', 'true');
+                toggleBtn.style.display = 'block';
+                toggleBtn.setAttribute('aria-expanded', 'false');
+            }
+        };
+
+        handleResize();
 
         window.addEventListener('resize', () => {
-            if (!Utils.isMobile()) {
-                nav.style.display = 'flex';
-                toggleBtn.style.display = 'none';
-            } else {
-                toggleBtn.style.display = 'block';
-                nav.style.display = isOpen ? 'flex' : 'none';
-            }
+            handleResize();
         });
     }
 

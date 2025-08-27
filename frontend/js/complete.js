@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       if (resp.status === 'success') {
         message.textContent = 'Signup complete. Redirecting to profile completion...';
-        setTimeout(() => window.location.href = '/signup', 800);
+        setTimeout(() => window.location.href = '/complete', 800);
       } else {
         message.textContent = resp.error || 'Failed to complete signup';
       }

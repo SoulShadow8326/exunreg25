@@ -1,5 +1,6 @@
 *{
     overscroll-behavior: none;
+    box-sizing: border-box;
 }
 
 .login-page {
@@ -17,6 +18,10 @@
     width: 100%;
     max-width: 800px !important; 
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+.login-container {
+    margin: 0 auto;
+    box-sizing: border-box;
 }
 
 .complete-grid {
@@ -40,7 +45,7 @@
 .profile-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 18px;
+    gap: 8px;
 }
 
 .auth-below {
@@ -79,13 +84,15 @@
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
 }
 
  .form-label {
      font-weight: 600;
      color: var(--dark-charcoal);
      font-size: 0.9375rem; 
+     margin-bottom: 0;
+     line-height: 1.15;
  }
 
 .form-input {
@@ -96,7 +103,7 @@
     font-family: 'RalewayLocal', Raleway, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
     transition: all 0.2s ease;
     background: var(--white);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0rem;
 }
 
 .form-input:focus {
@@ -208,7 +215,7 @@
         margin-left: 12px;
     }
     .profile-panel {
-        grid-column: 1 / 2;
+        grid-column: 1 / -1;
     }
 }
 
@@ -218,20 +225,47 @@ body[data-page="complete"] .login-container {
 }
 
 body[data-page="complete"] .profile-grid {
-    display: flex;
-    gap: 36px;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: start;
 }
 
 body[data-page="complete"] .profile-grid > div {
-    flex: 1 1 0;
     display: flex;
     flex-direction: column;
-    gap: 22px;
+    gap: 6px;
+}
+
+.profile-grid .full-span {
+    grid-column: 1 / -1;
+}
+
+#address-field {
+    margin: 0;
+    padding: 0;
+}
+
+#address-field {
+    gap: 6px;
+}
+#address-field .form-label {
+    margin-bottom: 0;
+    line-height: 1.2;
+}
+
+
+
+
+.profile-grid > .full-span input,
+.profile-grid > div:nth-child(1) .form-input,
+.profile-grid > div:nth-child(3) .form-input,
+.phone-left .form-input {
+    padding-left: 0.75rem; 
 }
 
 body[data-page="complete"] .form-group {
-    margin-bottom: 6px;
+    margin-bottom: 4px;
 }
 
 body[data-page="complete"] label[for="individual"] {
@@ -254,10 +288,16 @@ body[data-page="complete"] .form-group > label[for="individual"] + input {
 }
 
 body[data-page="complete"] .form-input {
-    width: 22rem; 
-    max-width: 85%;
+    width: 100%;
+    max-width: 100%;
     min-width: 0;
+    box-sizing: border-box;
     font-family: 'RalewayLocal', Raleway, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+}
+
+body[data-page="complete"] .full-width {
+    width: 100% !important;
+    max-width: 100% !important;
 }
 
 body[data-page="complete"] input[type="checkbox"] {
@@ -266,7 +306,6 @@ body[data-page="complete"] input[type="checkbox"] {
     accent-color: var(--exun-blue);
 }
 
-/* Custom checkbox styling used in complete.html */
 .checkbox-wrapper {
     display: inline-flex;
     align-items: center;
@@ -275,7 +314,7 @@ body[data-page="complete"] input[type="checkbox"] {
 }
 .checkbox-wrapper .checkbox-input {
     position: relative;
-    opacity: 0; /* hide native checkbox */
+    opacity: 0;
     width: 18px;
     height: 18px;
 }
@@ -348,4 +387,79 @@ body[data-page="complete"] .button-row .login-btn {
         width: 100%;
         max-width: 100%;
     }
+}
+
+#phone-field .iti {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    background: var(--white);
+    border: 0.125rem solid rgba(56, 58, 60, 0.12);
+    border-radius: 0.625rem;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+#phone-field .iti__flag-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    height: auto;
+    margin-left: 0;
+    margin-right: 4px;
+}
+
+#phone-field .iti__selected-flag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f3f4f6;
+    color: #111827;
+    padding: 4px 6px;
+    border-radius: 6px;
+    box-shadow: none;
+    min-width: 32px;
+    height: auto;
+    box-sizing: border-box;
+}
+
+#phone-field .iti__selected-dial-code {
+    margin-left: 4px;
+    font-weight: 600;
+}
+
+#phone-field .iti__arrow {
+    margin-left: 4px;
+}
+
+#phone-field input#phone_number {
+    box-sizing: border-box;
+     padding: 0.625rem 0.75rem;
+    padding-left: 0.5rem !important;
+    text-align: left;
+    border: none;
+    background: transparent;
+    flex: 1 1 auto;
+    width: auto;
+    font-size: 16px;
+    outline: none;
+}
+
+#phone-field input#phone_number:focus {
+    box-shadow: none !important;
+}
+
+#phone-field .iti:focus-within {
+    border-color: var(--exun-blue);
+    box-shadow: 0 0 0 3px rgba(41,119,245,0.08);
+}
+
+#phone-field .iti,
+#phone-field .iti--separate-dial-code,
+#phone-field .iti input[type="tel"],
+#phone-field .iti__selected-dial-code,
+#phone-field .iti__selected-flag {
+    text-align: left !important;
 }

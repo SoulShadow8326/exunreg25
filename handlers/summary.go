@@ -79,16 +79,19 @@ func GetUserSummary(w http.ResponseWriter, r *http.Request) {
 	totalRegistrations := 0
 
 	eventsRaw, err := globalDB.GetAll("events")
-	totalEvents := 0
 	if err == nil {
 		for _, evd := range eventsRaw {
 			if ev, ok := evd.(*db.Event); ok {
-				totalEvents++
+				if user.Individual && !ev.IndependentRegistration {
+					continue
+				}
 				eventID := ev.ID
 				parts := []db.Participant{}
-				if user.Registrations != nil {
-					if p, ok := user.Registrations[eventID]; ok {
-						parts = p
+				if !user.Individual {
+					if user.Registrations != nil {
+						if p, ok := user.Registrations[eventID]; ok {
+							parts = p
+						}
 					}
 				}
 				status := "confirmed"
@@ -119,14 +122,13 @@ func GetUserSummary(w http.ResponseWriter, r *http.Request) {
 		"pending_registrations":   pendingCount,
 		"events":                  eventSummaries,
 		"user_info": map[string]interface{}{
-			"fullname":         user.Fullname,
-			"email":            user.Email,
-			"institution_name": user.InstitutionName,
-			"address":          user.Address,
-			"principals_name":  user.PrincipalsName,
-			"principals_email": user.PrincipalsEmail,
-			"school_code":      user.SchoolCode,
-			"individual":       user.Individual,
+			"fullname": user.Fullname,
+			"email":    user.Email,
+			"individual_info": map[string]interface{}{
+				"phone_number": user.PhoneNumber,
+				"address":      user.Address,
+			},
+			"individual": user.Individual,
 		},
 	}
 

@@ -249,15 +249,11 @@ func (ah *AuthHandler) SendOTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if u, gerr := ah.db.Get("users", req.Email); gerr == nil && u != nil {
 		response := Response{
-			Status:  "success",
-			Message: "User exists",
-			Data: map[string]interface{}{
-				"email":       req.Email,
-				"user_exists": true,
-			},
+			Status: "error",
+			Error:  "User already exists; request OTP only for new registrations or use login",
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(response)
 		return
 	} else {

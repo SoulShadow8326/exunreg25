@@ -49,7 +49,7 @@ func SubmitRegistrations(w http.ResponseWriter, r *http.Request) {
 	email := globalAuthHandler.getAuthenticatedUser(r)
 	userData, err := globalDB.Get("users", email)
 	if err != nil || userData == nil {
-		http.Redirect(w, r, "/complete_signup", http.StatusSeeOther)
+		http.Redirect(w, r, "/complete", http.StatusSeeOther)
 		return
 	}
 
