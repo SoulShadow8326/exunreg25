@@ -499,12 +499,12 @@ body[data-page="complete"] .button-row .login-btn {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 0px;
     width: 100%;
     background: var(--white);
     border: 0.125rem solid rgba(56, 58, 60, 0.12);
     border-radius: 0.75rem;
-    padding: 6px 8px;
+    padding: 0px 0px;
     box-sizing: border-box;
     min-height: 48px;
 }
