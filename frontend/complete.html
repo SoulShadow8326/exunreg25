@@ -22,46 +22,46 @@
 
                 <div class="complete-grid">
                     <div id="profile-section" class="profile-panel">
-                        <form class="login-form" id="complete-profile-form">
+                        <form class="login-form" id="complete-profile-form" autocomplete="off" spellcheck="false">
                             <div class="profile-grid">
                                 <div class="form-group" id="institution-field">
                                     <label class="form-label" for="institution_name">Institution name</label>
-                                    <input class="form-input" id="institution_name" name="institution_name" type="text" value="{{if .User}}{{.User.InstitutionName}}{{end}}" />
+                                    <input class="form-input" id="institution_name" name="institution_name" type="text" autocomplete="off" value="{{if .User}}{{.User.InstitutionName}}{{end}}" />
                                 </div>
 
                                 <div class="form-group" id="fullname-field" style="display: none;">
                                     <label class="form-label" for="fullname">Full name</label>
-                                    <input class="form-input" id="fullname" name="fullname" type="text" value="{{if .User}}{{.User.Fullname}}{{end}}" />
+                                    <input class="form-input" id="fullname" name="fullname" type="text" autocomplete="off" value="{{if .User}}{{.User.Fullname}}{{end}}" />
                                     <div class="form-error" id="err_fullname" aria-live="polite"></div>
                                 </div>
 
                                 <div class="form-group phone-half phone-right" id="phone-field">
                                     <label class="form-label" for="phone_number">Phone number</label>
-                                    <input class="form-input" id="phone_number" name="phone_number" type="tel" inputmode="numeric" pattern="[0-9]*" placeholder="" aria-describedby="err_phone_number" value="{{if .User}}{{.User.PhoneNumber}}{{end}}" />
+                                    <input class="form-input" id="phone_number" name="phone_number" type="tel" autocomplete="off" inputmode="numeric" pattern="[0-9]*" placeholder="" aria-describedby="err_phone_number" value="{{if .User}}{{.User.PhoneNumber}}{{end}}" />
                                     <div class="form-error" id="err_phone_number" aria-live="polite"></div>
                                 </div>
 
                                 <div class="form-group full-span" id="address-field">
                                     <label class="form-label" for="address">Address</label>
-                                    <input class="form-input" id="address" name="address" type="text" value="{{if .User}}{{.User.Address}}{{end}}" />
+                                    <input class="form-input" id="address" name="address" type="text" autocomplete="off" value="{{if .User}}{{.User.Address}}{{end}}" />
                                 </div>
 
                                 <div class="form-group" id="principal-name-field">
                                     <label class="form-label" for="principals_name">Principal's name</label>
-                                    <input class="form-input" id="principals_name" name="principals_name" type="text" value="{{if .User}}{{.User.PrincipalsName}}{{end}}" />
+                                    <input class="form-input" id="principals_name" name="principals_name" type="text" autocomplete="off" value="{{if .User}}{{.User.PrincipalsName}}{{end}}" />
                                 </div>
 
                                 <div class="form-group" id="principal-email-field">
                                     <label class="form-label" for="principals_email">Principal's email</label>
-                                    <input class="form-input" id="principals_email" name="principals_email" type="email" aria-describedby="err_principals_email" value="{{if .User}}{{.User.PrincipalsEmail}}{{end}}" />
+                                    <input class="form-input" id="principals_email" name="principals_email" type="email" autocomplete="off" aria-describedby="err_principals_email" value="{{if .User}}{{.User.PrincipalsEmail}}{{end}}" />
                                     <div class="form-error" id="err_principals_email" aria-live="polite"></div>
                                 </div>
 
                                 
 
                             </div>
-                    <div class="form-group">
-                        <label class="form-label">Individual</label>
+                    <div class="form-group checkbox-row">
+                        <label class="form-label" for="individual">Individual</label>
                         <label class="checkbox-wrapper">
                             <input type="checkbox" id="individual" name="individual" class="checkbox-input" {{if .User}}{{if .User.Individual}}checked{{end}}{{end}} />
                             <span class="checkbox-custom" aria-hidden="true"></span>

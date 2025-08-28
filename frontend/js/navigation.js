@@ -195,11 +195,23 @@ class Navigation {
                 nav.removeAttribute('aria-hidden');
                 toggleBtn.style.display = 'none';
                 toggleBtn.setAttribute('aria-expanded', 'false');
+                try { this.updateAuthLinks(); } catch (e) {}
             } else {
                 nav.classList.remove('open');
                 nav.setAttribute('aria-hidden', 'true');
                 toggleBtn.style.display = 'block';
                 toggleBtn.setAttribute('aria-expanded', 'false');
+                try {
+                    const authEl = nav.querySelector('[data-nav="auth"]');
+                    if (authEl) {
+                        const isLogged = !!this.currentUser;
+                        if (isLogged) {
+                            authEl.innerHTML = `\n                                <a href="/summary" class="navbar__link">Registration Summary</a>\n                                <a href="#" class="btn btn--primary navbar__link" data-action="logout">Logout</a>\n                            `;
+                        } else {
+                            authEl.innerHTML = `\n                                <a href="/login" class="btn btn--primary navbar__link" data-action="login">Login</a>\n                            `;
+                        }
+                    }
+                } catch (e) {}
             }
         };
 

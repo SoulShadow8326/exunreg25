@@ -4,20 +4,21 @@
 
 .event-detail-page {
     padding: 0px 0;
+
     min-height: 100vh;
 }
 
 .event-detail-header {
     background: var(--exun-blue);
     color: var(--white);
-    padding: 60px 0;
-    margin-bottom: 40px;
+    padding: 48px 0 32px 0;
+    margin-bottom: 28px;
 }
 
 .event-detail-title {
-    font-size: 48px;
+    font-size: clamp(24px, 5vw, 48px);
     font-weight: 700;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .event-detail-subtitle {
@@ -27,14 +28,14 @@
 
 .event-detail-content {
     display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 40px;
+    grid-template-columns: 1fr 340px;
+    gap: 28px;
 }
 
 .event-detail-main {
     background: var(--white);
     border-radius: 12px;
-    padding: 32px;
+    padding: 28px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
     border: 1px solid rgba(56, 58, 60, 0.1);
     margin-bottom: 24px;
@@ -46,10 +47,34 @@
     gap: 24px;
 }
 
+.event-detail__header {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.event-detail__image-container {
+    flex: 0 0 280px;
+    max-width: 280px;
+}
+
+.event-detail__image {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    display: block;
+    object-fit: cover;
+}
+
+.event-detail__header-content {
+    flex: 1 1 auto;
+}
+
 .event-info-card {
     background: var(--white);
     border-radius: 12px;
-    padding: 24px;
+    padding: 18px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
     border: 1px solid rgba(56, 58, 60, 0.1);
 }
@@ -145,23 +170,32 @@
 
 @media (max-width: 768px) {
     .event-detail-header {
-        padding: 40px 0;
+        padding: 28px 0;
     }
     
     .event-detail-title {
-        font-size: 32px;
+        font-size: clamp(20px, 6vw, 32px);
     }
-    
+
     .event-detail-main,
     .event-info-card {
-        padding: 20px;
+        padding: 16px;
     }
+
+    .event-detail__image-container { flex: 0 0 100%; max-width: 100%; }
+    .event-detail__header { align-items: flex-start; }
+    .event-detail__header-content { width: 100%; }
 }
 
 @media (max-width: 480px) {
     .event-detail-title {
-        font-size: 24px;
+        font-size: 20px;
     }
+
+    .event-info-item { padding: 10px 0; }
+    .event-info-label { font-size: 13px; }
+    .event-info-value { font-size: 14px; }
+    .registration-card { padding: 18px; }
 }
 
 @font-face {
@@ -248,14 +282,47 @@
     width: 92%;
     max-height: 86vh;
     overflow: auto;
+    box-sizing: border-box;
     box-shadow: 0 30px 80px rgba(2,6,23,0.12);
+}
+
+.modal-box {
+    overflow-x: hidden;
+}
+
+.inline-member-row {
+    width: 100%;
+    min-width: 0;
+}
+.inline-member-row > * {
+    min-width: 0;
+}
+.inline-member-row .form-input,
+.inline-registration-editor .form-input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
 }
 
 @media (max-width: 720px) {
     .inline-member-row { grid-template-columns: 1fr 1fr 80px 110px auto !important; }
     .inline-registration-editor .form-input { font-size: 14px; padding: 10px 12px; }
+
+    .inline-member-row { grid-template-columns: 1fr !important; grid-auto-flow: row; gap: 10px; }
+
+    .modal-box { width: 96%; max-width: 680px; overflow-x: hidden; }
+    .inline-registration-editor > div[role], .inline-registration-editor .btn, .inline-registration-editor .btn--primary, .inline-registration-editor .btn--secondary {
+        box-sizing: border-box;
+    }
+    .inline-registration-editor .btn { min-width: 84px; padding: 8px 12px; }
+    .inline-registration-editor .btn--primary, .inline-registration-editor .btn--secondary { flex: 0 0 auto; }
 }
 
+@media (max-width: 480px) {
+    .modal-box { max-width: 92%; padding: 14px; }
+    .inline-member-row { grid-template-columns: 1fr !important; }
+    .btn-inline-clear { min-width: 44px; height: 36px; padding: 6px; }
+}
 .modal-overlay { opacity: 0; transition: opacity 220ms ease; }
 .modal-box { transform: translateY(8px) scale(0.995); opacity: 0; transition: transform 220ms ease, opacity 220ms ease; }
 .modal-open.modal-overlay, .modal-overlay.modal-open { opacity: 1; }
