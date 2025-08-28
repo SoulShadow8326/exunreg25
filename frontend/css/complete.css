@@ -247,6 +247,35 @@ select:-webkit-autofill {
     .login-header { text-align: center; }
 }
 
+/* Inline checkbox label & control for the Individual field */
+#individual-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+#individual-wrapper .form-label {
+    margin-bottom: 0;
+    font-weight: 600;
+}
+
+body[data-page="complete"] input#individual {
+    transform: scale(1.15);
+    margin-left: 6px;
+}
+
+@media (max-width: 420px) {
+    #individual-wrapper {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+}
+
+@media (max-width: 600px) {
+    #phone-field .iti__selected-flag { min-width: 34px; padding: 4px 6px; }
+    #phone-field .iti__selected-flag img { height: 16px; }
+}
+
 @media (max-width: 600px) {
     body[data-page="complete"] .login-container {
         max-width: 100%;
