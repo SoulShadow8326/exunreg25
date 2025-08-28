@@ -41,9 +41,9 @@ We have different prizes available for teams (individual or multiple participant
 Podium points from each win will contribute towards a school’s overall points tally for Exun 2025 (further details on breakdown are given on our Events page). The school with the most points will win the coveted Exun 2025 Overall, and be awarded our specially-designed Exun 2025 Overall Trophy!
 
 
-## **Sudocrypt v14.0**
+## **Sudocrypt v15.0**
 
-Exun Clan’s flagship event of the year, we present Sudocrypt 14.0 this year, our annual international cryptic hunt. With thousands of participants and an exciting new system of game mechanics each year, levels are rewarding and sometimes challenging. Keep a lookout for the announcement and format for this year’s hunt (to be out soon)!
+Exun Clan’s flagship event of the year, we present Sudocrypt 15.0 this year, our annual international cryptic hunt. With thousands of participants and an exciting new system of game mechanics each year, levels are rewarding and sometimes challenging. Keep a lookout for the announcement and format for this year’s hunt (to be out soon)!
 
 However, first, what is a "cryptic hunt"? To put it simply: Cryptic hunts are the online equivalent of treasure hunts and require you to hunt the internet for clues to solve questions. For more information, you can check out [**this**](https://docs.google.com/document/d/1bpeRtE2YC09lHyKIuPUFJkxxp1gfuPPvRneCMJxPv7U/edit?usp=sharing) resource.
 
@@ -68,7 +68,7 @@ Be sure to mark your calendars for Exun 2025!
 
 Participants can either represent their respective schools (counted as "school participation"), or represent a team or go themselves for an event without affiliation to any school (counted as "independent participation") with a customized team name.
 
-Independent participation will only be allowed for events that will be completely online, i.e., Sudocrypt v14.0, ExML, Turing Test, Build: Unreality and Competitive Programming Prelims.
+Independent participation will only be allowed for events that will be completely online, i.e., Sudocrypt v15.0, ExML, Turing Test, Build: Unreality and Competitive Programming Prelims.
 
 Points won by teams and individuals under school participation will be counted towards their overall total points tally. Points will not be passed down to the nearest school team if independent participation takes place.
 

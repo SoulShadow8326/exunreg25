@@ -84,8 +84,6 @@
 .registrations-grid {
     display: grid;
     gap: 16px;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    align-items: start;
 }
 
 .registration-card {
@@ -210,44 +208,6 @@
     align-items: center;
 }
 
-@media (max-width: 480px) {
-    .registration-card {
-        padding: 16px;
-    }
-
-    .inline-member-row {
-        grid-template-columns: 1fr !important;
-        grid-auto-flow: row;
-        gap: 10px;
-    }
-
-    .inline-member-row .form-input {
-        width: 100%;
-        box-sizing: border-box;
-    }
-
-    .registration-card__actions {
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: flex-start;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .registration-card__actions .btn {
-        width: auto;
-        min-width: 96px;
-        padding: 8px 12px;
-    }
-
-    .btn-inline-clear {
-        min-width: 44px;
-        height: 36px;
-        padding: 6px;
-        border-radius: 8px;
-    }
-}
-
 .summary-content .btn {
     padding: 8px 12px;
     border-radius: 6px;
@@ -354,8 +314,8 @@
 .summary-content .form-input:focus {
     outline: none;
     border-color: #2977f5;
-    box-shadow: 0 8px 20px rgba(41,119,245,0.08);
-    transform: translateY(-1px);
+    box-shadow: 0 6px 12px rgba(41,119,245,0.08);
+    transform: none;
 }
 
 .inline-registration-editor .btn--primary {
@@ -402,6 +362,31 @@
 .registration-card--open {
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
     border-radius: 10px;
+}
+
+.registrations-grid > .registration-card.registration-card--open {
+    grid-column: auto !important;
+}
+
+.inline-registration-editor,
+.inline-member-row {
+    width: 100%;
+    overflow: visible;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
+}
+
+.inline-member-row {
+    min-width: 0;
+}
+
+.inline-member-row > * {
+    min-width: 0;
+}
+
+@media (max-width: 480px) {
+    .inline-member-row { grid-template-columns: 1fr !important; grid-auto-flow: row; gap: 10px; }
+    .inline-registration-editor { padding-left: 8px; padding-right: 8px; }
 }
 
 .empty-state {

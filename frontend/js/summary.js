@@ -163,7 +163,7 @@ class SummaryPage {
         const phone = this.userProfile.phone || this.userProfile.phone_number || '';
         const address = this.userProfile.address || this.userProfile.Address || '';
 
-        const individualCard = `
+    const individualCard = `
             <div class="profile-card">
                 <h4 class="profile-card__title">Individual Information</h4>
                 <div class="registration-card__details">
@@ -208,7 +208,63 @@ class SummaryPage {
         `;
         }
 
-        profileContainer.innerHTML = individualCard + principalCard;
+        const institution = this.userProfile.institution_name || this.userProfile.InstitutionName || this.userProfile.institution || this.userProfile.Institution || this.userProfile.school || this.userProfile.school_code || this.userProfile.SchoolCode || '';
+        const emailField = this.userProfile.email || this.userProfile.Email || this.userProfile.user_email || this.userProfile.UserEmail || '';
+        const phoneNumber = this.userProfile.phone || this.userProfile.phone_number || this.userProfile.PhoneNumber || this.userProfile.Phone || '';
+        const addressField = this.userProfile.address || this.userProfile.Address || '';
+        const createdRaw = this.userProfile.created_at || this.userProfile.CreatedAt || this.userProfile.createdAt || '';
+        let createdAtStr = '';
+        try {
+            if (createdRaw) {
+                const d = new Date(createdRaw);
+                if (!Number.isNaN(d.getTime())) createdAtStr = d.toLocaleString();
+                else createdAtStr = String(createdRaw);
+            }
+        } catch (e) { createdAtStr = String(createdRaw || ''); }
+
+        let schoolCard = '';
+        if (!this.userProfile.individual) {
+            schoolCard = `
+            <div class="profile-card">
+                <h4 class="profile-card__title">School Information</h4>
+                <div class="registration-card__details">
+                    <div class="registration-detail">
+                        <span class="registration-detail__label">School:</span>
+                        <span class="registration-detail__value">${institution || 'Not provided'}</span>
+                    </div>
+                    <div class="registration-detail">
+                        <span class="registration-detail__label">Phone:</span>
+                        <span class="registration-detail__value">${phoneNumber || 'Not provided'}</span>
+                    </div>
+                    <div class="registration-detail">
+                        <span class="registration-detail__label">Email:</span>
+                        <span class="registration-detail__value">${emailField || 'Not provided'}</span>
+                    </div>
+                    <div class="registration-detail">
+                        <span class="registration-detail__label">Address:</span>
+                        <span class="registration-detail__value">${addressField || 'Not provided'}</span>
+                    </div>
+                    <div class="registration-detail">
+                        <span class="registration-detail__label">Created:</span>
+                        <span class="registration-detail__value">${createdAtStr || 'Not provided'}</span>
+                    </div>
+                </div>
+            </div>
+            `;
+        }
+
+        const headerEl = document.querySelectorAll('.summary-section__title')[0];
+        let out = '';
+        if (this.userProfile.individual) {
+            if (headerEl) headerEl.innerHTML = '<span class="summary-section__icon">✧</span>Individual Information';
+            out = individualCard + principalCard;
+        } else {
+            if (headerEl) headerEl.innerHTML = '<span class="summary-section__icon">✧</span>School Information';
+            out = schoolCard + principalCard;
+            if (!schoolCard && !principalCard) out = individualCard;
+        }
+
+        profileContainer.innerHTML = out;
     }
 
     renderRegistrations() {
