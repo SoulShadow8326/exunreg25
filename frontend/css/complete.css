@@ -247,7 +247,42 @@ select:-webkit-autofill {
     .login-header { text-align: center; }
 }
 
-/* Inline checkbox label & control for the Individual field */
+.iti__country-list,
+#phone-field .iti__country-list {
+    position: absolute !important;
+    left: 0 !important;
+    right: auto !important;
+    max-height: 60vh !important;
+    max-width: 420px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08) !important;
+    background: #ffffff !important;
+    border-radius: 8px !important;
+    padding: 6px 0 !important;
+    z-index: 9999 !important;
+}
+
+.iti__country {
+    padding: 8px 12px !important;
+    white-space: nowrap;
+    line-height: 1.2 !important;
+}
+
+.iti__country:hover {
+    background: #f8fafc !important;
+}
+
+.iti__flag { 
+    width: 18px !important; 
+    height: 12px !important; 
+    margin-right: 10px !important;
+}
+
+@media (max-width: 420px) {
+    .iti__country-list, #phone-field .iti__country-list { max-width: calc(100vw - 32px) !important; left: 8px !important; }
+}
+
 #individual-wrapper {
     display: inline-flex;
     align-items: center;
