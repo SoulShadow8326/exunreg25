@@ -206,6 +206,7 @@ class EventDetailPage {
     const eventId = this.event.id || this.event.ID || this.eventId || this.event.name;
     let capacity = parseInt(this.event.participants || this.event.capacity || 1, 10) || 1;
     let existingMembers = [];
+    const self = this;
     try {
         const summaryResp = await ExunServices.api.apiRequest('/summary');
         if (summaryResp && summaryResp.status === 'success') {
@@ -279,7 +280,7 @@ class EventDetailPage {
                         try { json = await resp.json(); } catch(e) { json = null; }
                         if (resp.ok && (json === true || (json && json.status === 'success'))) {
                             Utils.showToast('Registration deleted', 'success');
-                            setTimeout(() => { cleanup(); window.location.href = '/events'; }, 400);
+                            setTimeout(() => { try { cleanup(); self.renderRegistrationSection(); } catch(e) { cleanup(); } }, 400);
                         } else {
                             const serverMsg = (json && (json.error || json.message || json.msg)) ? (json.error || json.message || json.msg) : null;
                             if (serverMsg) Utils.showToast(serverMsg.toString(), 'error');
@@ -390,7 +391,7 @@ class EventDetailPage {
             try { json = await resp.json(); } catch(e) { json = null; }
             if (resp.ok && (json === true || (json && json.status === 'success'))) {
                 Utils.showToast('Registration saved', 'success');
-                setTimeout(() => { cleanup(); window.location.href = '/events'; }, 1200);
+                setTimeout(() => { try { cleanup(); self.renderRegistrationSection(); } catch(e) { cleanup(); } }, 800);
             } else {
                 const serverMsg = (json && (json.error || json.message || json.msg)) ? (json.error || json.message || json.msg) : null;
                 if (serverMsg) Utils.showToast(serverMsg.toString(), 'error');

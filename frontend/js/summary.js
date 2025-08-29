@@ -694,7 +694,7 @@ class SummaryPage {
                 <p class="empty-state__description">
                     You haven't registered for any events yet. Explore our events and register for your favorites!
                 </p>
-                <button class="btn btn--primary" onclick="window.location.href='/events'">
+                <button class="btn btn--primary" data-action="back-to-events">
                     Browse Events
                 </button>
             </div>
@@ -719,6 +719,13 @@ class SummaryPage {
         }
 
         this.setupRefreshButton();
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest && e.target.closest('[data-action="back-to-events"]');
+            if (btn) {
+                e.preventDefault();
+                Utils.redirect('/events', 200);
+            }
+        });
     }
 
     setupRefreshButton() {
