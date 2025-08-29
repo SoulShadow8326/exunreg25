@@ -241,13 +241,29 @@ func GetAllEvents(w http.ResponseWriter, r *http.Request) {
 	if c, err := r.Cookie("email"); err == nil {
 		email = c.Value
 	}
-	eventsList, err := GetAllEventsForUser(email)
+
+	var eventsList []db.Event
+	var err error
+	if IsAdminEmail(email) {
+		eventsList, err = GetAllEventsData()
+	} else {
+		eventsList, err = GetAllEventsForUser(email)
+	}
 	if err != nil {
 		response := Response{Status: "error", Error: "Failed to retrieve events from DB"}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(response)
 		return
+	}
+
+	regCounts := map[string]int{}
+	if regs, err := globalDB.GetAll("registrations"); err == nil {
+		for _, rr := range regs {
+			if r, ok := rr.(*db.Registration); ok {
+				regCounts[r.EventID]++
+			}
+		}
 	}
 
 	events := []map[string]interface{}{}
@@ -266,6 +282,7 @@ func GetAllEvents(w http.ResponseWriter, r *http.Request) {
 			"eligibility":       ev.Eligibility,
 			"open_to_all":       ev.OpenToAll,
 			"dates":             ev.Dates,
+			"registrations":     regCounts[ev.ID],
 		}
 		events = append(events, event)
 	}

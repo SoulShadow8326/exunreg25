@@ -144,11 +144,20 @@ window.ExunServices.admin = {
         return { users: resp };
     },
     getEventRegistrations: async function(eventId) {
-        if (!eventId) {
-            return { registrations: [] };
+        let url = '/admin/event-registrations';
+        if (eventId) {
+            url += `?event_id=${encodeURIComponent(eventId)}`;
         }
-        const resp = await window.ExunServices.api.apiRequest(`/admin/event-registrations?event_id=${encodeURIComponent(eventId)}`);
-        return { registrations: resp };
+        const resp = await window.ExunServices.api.apiRequest(url);
+        let regs = [];
+        if (Array.isArray(resp)) {
+            regs = resp;
+        } else if (resp && Array.isArray(resp.data)) {
+            regs = resp.data;
+        } else if (resp && Array.isArray(resp.registrations)) {
+            regs = resp.registrations;
+        }
+        return { registrations: regs };
     },
     updateEvent: function(eventData) {
         return window.ExunServices.api.apiRequest('/admin/events', { method: 'POST', body: JSON.stringify(eventData) });

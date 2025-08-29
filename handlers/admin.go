@@ -418,7 +418,10 @@ func (ah *AdminHandler) GetEventRegistrations(w http.ResponseWriter, r *http.Req
 	}
 	usersByID := make(map[int]db.User)
 	for _, u := range usersRaw {
-		if usr, ok := u.(db.User); ok {
+		switch usr := u.(type) {
+		case *db.User:
+			usersByID[usr.ID] = *usr
+		case db.User:
 			usersByID[usr.ID] = usr
 		}
 	}
@@ -432,7 +435,10 @@ func (ah *AdminHandler) GetEventRegistrations(w http.ResponseWriter, r *http.Req
 	eventsRaw, _ := ah.db.GetAll("events")
 	eventsByID := make(map[string]db.Event)
 	for _, ev := range eventsRaw {
-		if e, ok := ev.(db.Event); ok {
+		switch e := ev.(type) {
+		case *db.Event:
+			eventsByID[e.ID] = *e
+		case db.Event:
 			eventsByID[e.ID] = e
 		}
 	}
@@ -447,10 +453,38 @@ func (ah *AdminHandler) GetEventRegistrations(w http.ResponseWriter, r *http.Req
 			continue
 		}
 
-		user := usersByID[reg.UserID]
+		user, found := usersByID[reg.UserID]
+		if !found {
+			if uiface, err := ah.db.Get("users", ""); err == nil && uiface != nil {
+				_ = uiface
+			}
+			for _, ur := range usersRaw {
+				switch uu := ur.(type) {
+				case *db.User:
+					if uu.ID == reg.UserID {
+						user = *uu
+						found = true
+						break
+					}
+				case db.User:
+					if uu.ID == reg.UserID {
+						user = uu
+						found = true
+						break
+					}
+				}
+				if found {
+					break
+				}
+			}
+		}
 
-		userEmail := user.Email
-		userName := user.Fullname
+		userEmail := ""
+		userName := ""
+		if found {
+			userEmail = user.Email
+			userName = user.Fullname
+		}
 		teamName := reg.TeamName
 		status := reg.Status
 		created := reg.CreatedAt
