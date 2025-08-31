@@ -23,6 +23,11 @@
                 <p class="events-page__subtitle">
                     Discover our diverse range of technology events designed for every skill level and interest. From competitive programming to robotics, find your passion here.
                 </p>
+                {{if .IsAuthenticated}}
+                <div class="events-page__header-actions" style="padding-top: 15px; border-radius: 12px;">
+                    <a href="/summary" class="btn btn--secondary events-page__summary-btn">View Registration Summary</a>
+                </div>
+                {{end}}
             </header>
             
             <div class="events-page__filters" id="event-filters">

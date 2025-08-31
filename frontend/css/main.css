@@ -31,7 +31,10 @@ html {
     box-sizing: border-box;
     overscroll-behavior: none;
 }
-
+*:focus-visible {
+    outline: 2px solid #2977f5;
+    border-radius: 6px;
+}
 ::-webkit-scrollbar {
   display: none;
 }

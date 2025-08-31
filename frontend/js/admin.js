@@ -31,7 +31,16 @@ class AdminPage {
     async loadData() {
         try {
             const response = await ExunServices.api.apiRequest('/admin/stats');
-            this.stats = response && (response.data || response) || {};
+            let statsObj = {};
+            if (response) {
+                if (response.data && typeof response.data === 'object') {
+                    statsObj = Object.assign({}, response.data, response);
+                    delete statsObj.data;
+                } else {
+                    statsObj = response;
+                }
+            }
+            this.stats = statsObj || {};
             this.renderStats();
             return;
         } catch (error) {
@@ -51,13 +60,7 @@ class AdminPage {
             this._tabListenersAttached = true;
         }
 
-        const createEventBtn = document.getElementById('create-event-btn');
-        if (createEventBtn && !this._createEventBtnAttached) {
-            createEventBtn.addEventListener('click', () => {
-                this.showCreateEventModal();
-            });
-            this._createEventBtnAttached = true;
-        }
+        
 
         const importBtn = document.getElementById('import-events-btn');
         if (importBtn && !this._importBtnAttached) {
@@ -211,9 +214,6 @@ class AdminPage {
                 <div class="admin-events">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="text-xl font-semibold">Event Management</h3>
-                        <button id="create-event-btn" class="btn btn--primary">
-                            Create New Event
-                        </button>
                     </div>
                     <div class="admin-table-container">
                         <table class="admin-table">
@@ -223,7 +223,6 @@ class AdminPage {
                                     <th>Mode</th>
                                     <th>Participants</th>
                                     <th>Registrations</th>
-                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -233,13 +232,7 @@ class AdminPage {
                                         <td>${Utils.formatEventMode(event.mode)}</td>
                                         <td>${Utils.formatParticipants(event.participants)}</td>
                                         <td>${event.registrations || 0}</td>
-                                        <td>
-                                            <div class="flex gap-2">
-                                                <button class="btn btn--secondary" onclick="adminPage.editEvent('${event.id}')">
-                                                    Edit
-                                                </button>
-                                            </div>
-                                        </td>
+                                        
                                     </tr>
                                 `).join('')}
                             </tbody>
@@ -377,7 +370,11 @@ class AdminPage {
     async loadRegistrations() {
         try {
             const response = await ExunServices.admin.getEventRegistrations();
-            const registrations = response.registrations || [];
+            let registrations = [];
+            if (Array.isArray(response)) registrations = response;
+            else if (response && Array.isArray(response.data)) registrations = response.data;
+            else if (response && Array.isArray(response.registrations)) registrations = response.registrations;
+            else if (response && response.data && Array.isArray(response.data)) registrations = response.data;
             
             const container = document.getElementById('registrations-content');
             container.innerHTML = `
@@ -482,35 +479,6 @@ class AdminPage {
         cancelBtn.addEventListener('click', () => this.closeModal());
     }
 
-    async handleCreateEvent(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(e.target);
-        const eventData = {
-            name: formData.get('name'),
-            mode: formData.get('mode'),
-            participants: parseInt(formData.get('participants')),
-            description: formData.get('description'),
-            eligibility: [
-                parseInt(formData.get('minClass')) || 6,
-                parseInt(formData.get('maxClass')) || 12
-            ],
-            open_to_all: !formData.get('minClass') || !formData.get('maxClass')
-        };
-
-        try {
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            Utils.setLoading(submitBtn, true);
-            
-            await ExunServices.admin.updateEvent(eventData);
-            Utils.showToast('Event created successfully!', 'success');
-            this.closeModal();
-            this.renderCurrentTab();
-        } catch (error) {
-            console.error('Failed to create event:', error);
-            Utils.showToast('Failed to create event', 'error');
-        }
-    }
 
     editEvent(eventId) {
         Utils.showToast('Edit event functionality coming soon!', 'info');
@@ -519,62 +487,4 @@ class AdminPage {
     viewEventRegistrations(eventId) {
         Utils.showToast('View registrations functionality coming soon!', 'info');
     }
-
-    viewUserDetails(userId) {
-        const modal = document.getElementById('admin-modal');
-        const modalContent = document.getElementById('modal-content');
-        const findId = String(userId || '').toLowerCase();
-        let user = null;
-        for (const u of this.users) {
-            if (!u) continue;
-            const candidates = [u.email, u.Email, u.username, u.Username, u.id, u.ID];
-            for (const c of candidates) {
-                if (c == null) continue;
-                if (String(c).toLowerCase() === findId) {
-                    user = u;
-                    break;
-                }
-            }
-            if (user) break;
-        }
-        let contentHtml = '<div class="admin-modal__header"><h3 class="admin-modal__title">User Details</h3><button id="modal-close" class="admin-modal__close">&times;</button></div>';
-        if (!user) {
-            contentHtml += '<div class="admin-modal__body">User not found</div>';
-        } else {
-            const u = user;
-            contentHtml += '<div class="admin-modal__body">';
-            contentHtml += `<p><strong>Name:</strong> ${Utils.escapeHtml(u.fullname || u.Fullname || u.name || '')}</p>`;
-            contentHtml += `<p><strong>Email:</strong> ${Utils.escapeHtml(u.email || u.Email || '')}</p>`;
-            contentHtml += `<p><strong>School:</strong> ${Utils.escapeHtml(u.institution_name || u.InstitutionName || '')}</p>`;
-            contentHtml += `<p><strong>Phone:</strong> ${Utils.escapeHtml(u.phone_number || u.PhoneNumber || '')}</p>`;
-            contentHtml += `<p><strong>Principal:</strong> ${Utils.escapeHtml(u.principals_name || u.PrincipalsName || '')} &lt;${Utils.escapeHtml(u.principals_email || u.PrincipalsEmail || '')}&gt;</p>`;
-            contentHtml += `<p><strong>School Code:</strong> ${Utils.escapeHtml(u.school_code || u.SchoolCode || '')}</p>`;
-            contentHtml += '<h4>Registrations</h4>';
-            try {
-                let regs = u.registrations || u.Registrations || u.registrations_raw || u.registrations;
-                if (typeof regs === 'string') regs = JSON.parse(regs || '{}');
-                contentHtml += `<pre>${Utils.escapeHtml(JSON.stringify(regs, null, 2))}</pre>`;
-            } catch (e) {
-                contentHtml += `<pre>Unable to parse registrations</pre>`;
-            }
-            contentHtml += '</div>';
-        }
-        modalContent.innerHTML = contentHtml;
-        modal.classList.add('admin-modal--open');
-        const closeBtn = document.getElementById('modal-close');
-        if (closeBtn) closeBtn.addEventListener('click', () => this.closeModal());
-    }
-
-    closeModal() {
-        const modal = document.getElementById('admin-modal');
-        modal.classList.remove('admin-modal--open');
-    }
 }
-
-let adminPage;
-
-document.addEventListener('DOMContentLoaded', () => {
-    if (document.body.dataset.page === 'admin') {
-        adminPage = new AdminPage();
-    }
-});

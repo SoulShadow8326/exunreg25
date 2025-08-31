@@ -30,25 +30,14 @@
                         <span class="admin-card__icon">⌘</span>
                     </div>
                         <div class="admin-card__content">
-                            {{if .Stats}}
-                            <div class="stat-item">
-                                <span class="stat-label">Total Events:</span>
-                                <span id="total-events" class="stat-value">{{.Stats.TotalEvents}}</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-label">Active Events:</span>
-                                <span id="active-events" class="stat-value">{{.Stats.TotalEvents}}</span>
-                            </div>
-                            {{else}}
-                            <div class="stat-item">
-                                <span class="stat-label">Total Events:</span>
-                                <span class="stat-value">0</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-label">Active Events:</span>
-                                <span class="stat-value">0</span>
-                            </div>
-                            {{end}}
+                                <div class="stat-item">
+                                    <span class="stat-label">Total Events:</span>
+                                    <span id="total-events" class="stat-value">{{if .Stats}}{{.Stats.TotalEvents}}{{else}}0{{end}}</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Active Events:</span>
+                                    <span id="active-events" class="stat-value">{{if .Stats}}{{.Stats.TotalEvents}}{{else}}0{{end}}</span>
+                                </div>
                             <div class="admin-card__actions">
                                 <button id="import-events-btn" class="btn">Import events</button>
                             </div>
@@ -61,25 +50,14 @@
                         <span class="admin-card__icon">⌘</span>
                     </div>
                     <div class="admin-card__content">
-                        {{if .Stats}}
                         <div class="stat-item">
                             <span class="stat-label">Total Users:</span>
-                            <span id="total-users" class="stat-value">{{.Stats.TotalUsers}}</span>
+                            <span id="total-users" class="stat-value">{{if .Stats}}{{.Stats.TotalUsers}}{{else}}0{{end}}</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">Registrations:</span>
-                            <span id="total-registrations" class="stat-value">{{.Stats.TotalRegistrations}}</span>
+                            <span id="total-registrations" class="stat-value">{{if .Stats}}{{.Stats.TotalRegistrations}}{{else}}0{{end}}</span>
                         </div>
-                        {{else}}
-                        <div class="stat-item">
-                            <span class="stat-label">Total Users:</span>
-                            <span class="stat-value">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Registrations:</span>
-                            <span class="stat-value">0</span>
-                        </div>
-                        {{end}}
                     </div>
                 </div>
             </div>

@@ -107,8 +107,20 @@ func (ah *AdminHandler) GetAdminStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	resp := map[string]interface{}{
+		"totalUsers":          stats.TotalUsers,
+		"total_users":         stats.TotalUsers,
+		"totalEvents":         stats.TotalEvents,
+		"total_events":        stats.TotalEvents,
+		"totalRegistrations":  stats.TotalRegistrations,
+		"total_registrations": stats.TotalRegistrations,
+		"event_stats":         stats.EventStats,
+		"user_registrations":  stats.UserRegistrations,
+		"data":                stats,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(stats)
+	json.NewEncoder(w).Encode(resp)
 }
 
 func GetAdminStatsData() (AdminStats, error) {
@@ -122,10 +134,19 @@ func GetAdminStatsData() (AdminStats, error) {
 		return AdminStats{}, err
 	}
 
-	var nonAdminUsers []interface{}
+	usersByID := make(map[int]db.User)
 	for _, u := range users {
-		user := u.(*db.User)
-		if IsAdminEmail(user.Email) {
+		switch usr := u.(type) {
+		case *db.User:
+			usersByID[usr.ID] = *usr
+		case db.User:
+			usersByID[usr.ID] = usr
+		}
+	}
+
+	var nonAdminUsers []db.User
+	for _, u := range usersByID {
+		if IsAdminEmail(u.Email) {
 			continue
 		}
 		nonAdminUsers = append(nonAdminUsers, u)
@@ -140,7 +161,13 @@ func GetAdminStatsData() (AdminStats, error) {
 	}
 
 	for _, eventData := range events {
-		event := eventData.(*db.Event)
+		var event db.Event
+		switch ed := eventData.(type) {
+		case *db.Event:
+			event = *ed
+		case db.Event:
+			event = ed
+		}
 		eventStats := EventStats{
 			EventName:         event.Name,
 			TotalParticipants: 0,
@@ -149,11 +176,22 @@ func GetAdminStatsData() (AdminStats, error) {
 			Eligibility:       event.Eligibility,
 		}
 
-		for _, userData := range nonAdminUsers {
-			user := userData.(*db.User)
-			if participants, exists := user.Registrations[event.ID]; exists {
-				eventStats.TotalParticipants += len(participants)
+		regs, _ := globalDB.GetAll("registrations")
+		for _, rr := range regs {
+			if r, ok := rr.(*db.Registration); ok {
+				if r.EventID != event.ID {
+					continue
+				}
 				eventStats.TotalTeams++
+				memberCount := 0
+				if u, ok := usersByID[r.UserID]; ok {
+					if u.Registrations != nil {
+						if parts, exists := u.Registrations[r.EventID]; exists {
+							memberCount = len(parts)
+						}
+					}
+				}
+				eventStats.TotalParticipants += memberCount
 				stats.TotalRegistrations++
 			}
 		}
@@ -161,20 +199,20 @@ func GetAdminStatsData() (AdminStats, error) {
 		stats.EventStats[event.ID] = eventStats
 	}
 
-	for _, userData := range nonAdminUsers {
-		user := userData.(*db.User)
+	for _, user := range nonAdminUsers {
 		userStats := UserStats{
 			Email:             user.Email,
 			Fullname:          user.Fullname,
 			Institution:       user.InstitutionName,
-			TotalEvents:       len(user.Registrations),
+			TotalEvents:       0,
 			TotalParticipants: 0,
 		}
-
-		for _, participants := range user.Registrations {
-			userStats.TotalParticipants += len(participants)
+		if user.Registrations != nil {
+			userStats.TotalEvents = len(user.Registrations)
+			for _, participants := range user.Registrations {
+				userStats.TotalParticipants += len(participants)
+			}
 		}
-
 		stats.UserRegistrations[user.Email] = userStats
 	}
 
@@ -517,7 +555,7 @@ func (ah *AdminHandler) GetEventRegistrations(w http.ResponseWriter, r *http.Req
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(out)
+	json.NewEncoder(w).Encode(map[string]interface{}{"data": out, "registrations": out})
 }
 
 func (ah *AdminHandler) ExportData(w http.ResponseWriter, r *http.Request) {
