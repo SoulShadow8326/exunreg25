@@ -64,7 +64,7 @@ class SummaryPage {
         const profileCall = calls[0];
         const summaryCall = calls[1];
 
-        if (profileCall.status === 'fulfilled') {
+    if (profileCall.status === 'fulfilled') {
             console.log('SummaryPage.loadData: /user/profile fulfilled', profileCall.value);
             try {
                 this.userProfile = profileCall.value.data || {};
@@ -72,6 +72,13 @@ class SummaryPage {
         } else {
             console.warn('SummaryPage.loadData: /user/profile failed', profileCall.reason);
         }
+
+        try {
+            this.userProfile = this.userProfile || {};
+            const authOk = this.computeAuthFromProfile(this.userProfile);
+            this.userProfile.auth = authOk ? 1 : 0;
+            console.log('SummaryPage.loadData: computed auth=', this.userProfile.auth);
+        } catch (e) { console.error('SummaryPage.loadData: auth compute failed', e); }
 
         if (summaryCall.status === 'fulfilled') {
             console.log('SummaryPage.loadData: /summary fulfilled', summaryCall.value);
@@ -267,6 +274,26 @@ class SummaryPage {
         profileContainer.innerHTML = out;
     }
 
+    computeAuthFromProfile(profile) {
+        try {
+            const p = Object.assign({}, profile || {});
+            const phone = p.phone || p.phone_number || p.Phone || p.PhoneNumber || '';
+            const isIndividual = !!(p.individual || p.Individual);
+            const missing = [];
+            if (!phone || String(phone).trim() === '') missing.push('phone');
+            if (isIndividual) {
+                const name = p.fullname || p.fullName || p.name || '';
+                if (!name || String(name).trim() === '') missing.push('full name');
+            } else {
+                const inst = p.institution_name || p.institution || p.school || '';
+                const princ = p.principals_email || p.principalsEmail || p.PrincipalsEmail || '';
+                if (!inst || String(inst).trim() === '') missing.push('institution');
+                if (!princ || String(princ).trim() === '') missing.push('principal email');
+            }
+            return missing.length === 0;
+        } catch (e) { return false; }
+    }
+
     renderRegistrations() {
         const registrationsContainer = document.getElementById('registrations-container');
         if (!registrationsContainer) return;
@@ -302,6 +329,12 @@ class SummaryPage {
                     ev.stopPropagation();
                     const eid = btn.dataset.eventId;
                     if (!eid) return;
+                    const profile = this.userProfile || {};
+                    if ((profile.auth || 0) !== 1) {
+                        Utils.showToast('Complete your profile before registering', 'error');
+                        setTimeout(() => { window.location.href = '/complete'; }, 900);
+                        return;
+                    }
                     const card = registrationsContainer.querySelector(`.registration-card[data-event-id="${eid}"]`);
                     const reg = this.registrations.find(r => (r.eventId || r.eventID || r.event_id || r.event || '').toString() === eid.toString());
                     if (card) await this.toggleInlineEditor(card, reg);
@@ -315,6 +348,14 @@ class SummaryPage {
                     if (ev.target && ev.target.closest && ev.target.closest('button')) return;
                     const eid = card.dataset.eventId;
                     if (!eid) return;
+
+                    const profile = this.userProfile || {};
+                    if ((profile.auth || 0) !== 1) {
+                        Utils.showToast('Complete your profile before registering', 'error');
+                        setTimeout(() => { window.location.href = '/complete'; }, 900);
+                        return;
+                    }
+
                     const reg = this.registrations.find(r => (r.eventId || r.eventID || r.event_id || r.event || '').toString() === eid.toString());
                     await this.toggleInlineEditor(card, reg);
                 });

@@ -160,6 +160,28 @@ class EventDetailPage {
                     Utils.redirect('/login', 100);
                     return;
                 }
+
+                try {
+                    const profileResp = await ExunServices.api.apiRequest('/auth/profile');
+                    if (!profileResp || profileResp.status !== 'success' || !profileResp.data) {
+                        Utils.redirect('/complete', 100);
+                        return;
+                    }
+                    const user = profileResp.data;
+                    const check = this.checkProfileCompleteness(user);
+                    if (!check.ok) {
+                        const missingList = check.missing.join(', ');
+                        Utils.showToast('Complete your profile before registering. Missing: ' + missingList, 'error');
+                        setTimeout(() => { Utils.redirect('/complete', 900); }, 900);
+                        return;
+                    }
+                } catch (e) {
+                    console.error('Profile check failed', e);
+                    Utils.showToast('Failed to verify profile. Please login again.', 'error');
+                    Utils.redirect('/login', 200);
+                    return;
+                }
+
                 await this.openRegistrationModal();
             });
         }
@@ -200,6 +222,26 @@ class EventDetailPage {
             return;
         }
 
+    }
+
+    checkProfileCompleteness(user) {
+        const u = Object.assign({}, user);
+        const isIndividual = (u.individual === true) || (u.Individual === true) || (u.individual === 'true');
+        const missing = [];
+        const phone = u.phone_number || u.phoneNumber || u.PhoneNumber || u.Phone || '';
+        if (!phone || String(phone).trim() === '') missing.push('phone number');
+
+        if (isIndividual) {
+            const fullname = u.fullname || u.fullName || u.Fullname || u.name || '';
+            if (!fullname || String(fullname).trim() === '') missing.push('full name');
+        } else {
+            const inst = u.institution_name || u.institutionName || u.InstitutionName || u.institution || '';
+            const princ = u.principals_email || u.principalsEmail || u.PrincipalsEmail || u.principal_email || '';
+            if (!inst || String(inst).trim() === '') missing.push('institution name');
+            if (!princ || String(princ).trim() === '') missing.push("principal's email");
+        }
+
+        return { ok: missing.length === 0, missing };
     }
 
     async openRegistrationModal() {

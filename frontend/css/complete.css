@@ -490,6 +490,7 @@ body[data-page="complete"] .login-form .login-btn {
 
 body[data-page="complete"] .button-row .login-btn {
     width: auto;
+    font-family: 'Raleway', sans-serif;
 }
 
 .button-row {
@@ -506,8 +507,9 @@ body[data-page="complete"] .button-row .login-btn {
 }
 
 .button-row .login-btn#back-to-profile {
-    background: #ffffff;
-    border: none;
+    background: transparent;
+    color: var(--exun-blue);
+    border: 2px solid var(--exun-blue);
 }
 
 @media (max-width: 480px) {
