@@ -25,20 +25,20 @@ func Load() (*Config, error) {
 
 	authSalt := getEnv("AUTH_SALT", "")
 	if authSalt == "" {
-		return nil, fmt.Errorf("AUTH_SALT environment variable is required")
+		return nil, fmt.Errorf("AUTH_SALT is required")
 	}
 
 	config := &Config{
 		DBPath:       getEnv("DB_PATH", "./data/exunreg25.db"),
 		Port:         getEnv("PORT", "8080"),
 		AuthSalt:     authSalt,
-		CookieSecure: getEnvBool("COOKIE_SECURE", false),
+		CookieSecure: getEnvBool("COOKIE_SECURE", true),
 		SMTPHost:     getEnv("SMTP_HOST", "smtp.gmail.com"),
 		SMTPPort:     getEnv("SMTP_PORT", "587"),
 		SMTPUsername: getEnv("SMTP_USERNAME", ""),
 		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
-		FromEmail:    getEnv("FROM_EMAIL", "noreply@exun.co"),
-		FromName:     getEnv("FROM_NAME", "Exun Clan"),
+		FromEmail:    getEnv("FROM_EMAIL", ""),
+		FromName:     getEnv("FROM_NAME", ""),
 	}
 
 	return config, nil
