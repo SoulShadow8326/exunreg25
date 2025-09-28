@@ -16,12 +16,6 @@
     {{template "navbar" .}}
     
     <main class="admin-page">
-        <div class="admin-header">
-            <div class="container">
-                <h1 class="admin-title">{{.PageTitle}}</h1>
-            </div>
-        </div>
-        
         <div class="container">
             <div class="admin-dashboard">
                 <div class="admin-card">
@@ -99,5 +93,12 @@
     <script src="/js/utils.js"></script>
     <script src="/js/navigation.js"></script>
     <script src="/js/admin.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (document.body && document.body.getAttribute('data-page') === 'admin') {
+            window.adminPage = new AdminPage();
+        }
+    });
+    </script>
 </body>
 </html>

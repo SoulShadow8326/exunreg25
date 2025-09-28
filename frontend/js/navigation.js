@@ -119,15 +119,16 @@ class Navigation {
     }
 
     setupMobileMenu() {
-        if (!Utils.isMobile()) return;
-
-        const navbar = document.querySelector('.navbar');
+    const navbar = document.querySelector('.navbar');
         const nav = document.querySelector('.navbar__nav');
         
         if (!navbar || !nav) return;
 
-        const toggleBtn = document.createElement('button');
-        toggleBtn.className = 'navbar__toggle';
+        let toggleBtn = navbar.querySelector('.navbar__toggle');
+        if (!toggleBtn) {
+            toggleBtn = document.createElement('button');
+            toggleBtn.className = 'navbar__toggle';
+        }
         toggleBtn.setAttribute('aria-label', 'Toggle navigation');
         toggleBtn.setAttribute('aria-expanded', 'false');
 
@@ -188,9 +189,12 @@ class Navigation {
             if (isOpen) closeMenu(); else openMenu();
         });
 
-        navbar.appendChild(toggleBtn);
+        if (!navbar.contains(toggleBtn)) navbar.appendChild(toggleBtn);
+
+        const mql = window.matchMedia('(max-width: 768px)');
         const handleResize = () => {
-            if (!Utils.isMobile()) {
+            const mobile = mql.matches;
+            if (!mobile) {
                 nav.classList.remove('open');
                 nav.removeAttribute('aria-hidden');
                 toggleBtn.style.display = 'none';
@@ -217,9 +221,11 @@ class Navigation {
 
         handleResize();
 
-        window.addEventListener('resize', () => {
-            handleResize();
-        });
+        if (typeof mql.addEventListener === 'function') {
+            mql.addEventListener('change', handleResize);
+        } else if ('onchange' in mql) {
+            mql.onchange = handleResize;
+        }
     }
 
     async handleLogout() {

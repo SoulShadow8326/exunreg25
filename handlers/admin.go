@@ -75,6 +75,11 @@ func (ah *AdminHandler) AdminPanel(w http.ResponseWriter, r *http.Request) {
 	}
 	email := globalAuthHandler.getAuthenticatedUser(r)
 	if !IsAdminEmail(email) {
+		if r.Method == http.MethodGet {
+			w.WriteHeader(http.StatusNotFound)
+			http.ServeFile(w, r, "./frontend/404.html")
+			return
+		}
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}

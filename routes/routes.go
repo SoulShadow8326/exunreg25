@@ -416,16 +416,38 @@ func SetupRoutes() *http.ServeMux {
 	mux.HandleFunc("/admin", func(w http.ResponseWriter, r *http.Request) {
 		data := getTemplateData(r)
 		if !data.IsAuthenticated || !data.IsAdmin {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			data.PageTitle = "Page not found | Exun 2025"
+			w.WriteHeader(http.StatusNotFound)
+			templates.RenderTemplate(w, "404", data)
 			return
 		}
 		data.PageTitle = "Admin | Exun 2025"
+		if stats, err := handlers.GetAdminStatsData(); err == nil {
+			tmplStats := templates.AdminStats{
+				TotalUsers:         stats.TotalUsers,
+				TotalEvents:        stats.TotalEvents,
+				TotalRegistrations: stats.TotalRegistrations,
+				EventStats:         make(map[string]templates.EventStats),
+			}
+			for id, s := range stats.EventStats {
+				tmplStats.EventStats[id] = templates.EventStats{
+					EventName:         s.EventName,
+					TotalParticipants: s.TotalParticipants,
+					TotalTeams:        s.TotalTeams,
+					Mode:              s.Mode,
+					Eligibility:       s.Eligibility,
+				}
+			}
+			data.Stats = &tmplStats
+		}
 		templates.RenderTemplate(w, "admin", data)
 	})
 	mux.HandleFunc("/admin/", func(w http.ResponseWriter, r *http.Request) {
 		data := getTemplateData(r)
 		if !data.IsAuthenticated || !data.IsAdmin {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			data.PageTitle = "Page not found | Exun 2025"
+			w.WriteHeader(http.StatusNotFound)
+			templates.RenderTemplate(w, "404", data)
 			return
 		}
 		data.PageTitle = "Admin | Exun 2025"

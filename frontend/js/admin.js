@@ -386,7 +386,6 @@ class AdminPage {
                             <th>Team Name</th>
                             <th>Members</th>
                             <th>Registration Date</th>
-                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -396,7 +395,6 @@ class AdminPage {
                             const createdRaw = reg.createdAt ? new Date(reg.createdAt) : (reg.createdAt instanceof Date ? reg.createdAt : null);
                             const createdStr = createdRaw ? Utils.formatDate(createdRaw) : (reg.createdAt ? Utils.formatDate(reg.createdAt) : 'N/A');
                             const team = reg.teamName || reg.TeamName || (members.length ? 'Team' : 'Individual');
-                            const status = (reg.status || reg.Status || 'pending').toString();
                             return `
                             <tr>
                                 <td>${Utils.escapeHtml(reg.eventName || reg.eventName || '')}</td>
@@ -404,11 +402,6 @@ class AdminPage {
                                 <td>${Utils.escapeHtml(team)}</td>
                                 <td>${members.length || (reg.memberCount || 1)}</td>
                                 <td>${Utils.escapeHtml(createdStr)}</td>
-                                <td>
-                                    <span class="badge badge--${Utils.escapeHtml(status.toLowerCase())}">
-                                        ${Utils.escapeHtml(status)}
-                                    </span>
-                                </td>
                             </tr>
                         `}).join('')}
                     </tbody>
