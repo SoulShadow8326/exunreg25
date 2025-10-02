@@ -42,6 +42,7 @@ func getTemplateData(r *http.Request) templates.TemplateData {
 	data.IsHome = (r.URL.Path == "/" || r.URL.Path == "/index")
 	data.IsEvents = (r.URL.Path == "/events")
 	data.IsBrochure = strings.HasPrefix(r.URL.Path, "/brochure")
+	data.IsQuery = (r.URL.Path == "/query")
 
 	return data
 }
@@ -305,6 +306,11 @@ func SetupRoutes() *http.ServeMux {
 			data.PageTitle = "Complete Signup | Exun 2025"
 			templates.RenderTemplate(w, "complete", data)
 			return
+		case "/query":
+			data := getTemplateData(r)
+			data.PageTitle = "Queries | Exun 2025"
+			templates.RenderTemplate(w, "query", data)
+			return
 		case "/login":
 			data := getTemplateData(r)
 			data.PageTitle = "Login | Exun 2025"
@@ -365,6 +371,8 @@ func SetupRoutes() *http.ServeMux {
 
 	mux.HandleFunc("/api/events", handlers.GetAllEvents)
 	mux.HandleFunc("/api/events/", handlers.GetEvent)
+
+	mux.HandleFunc("/api/query", handlers.QueryHandler)
 
 	submitRegHandler := http.HandlerFunc(handlers.SubmitRegistrations)
 	mux.Handle("/api/submit_registrations", middleware.AuthRequired(submitRegHandler))

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Queries | Exun 2025</title>
+    <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/navbar.css">
+    <link rel="stylesheet" href="/css/footer.css">
+    <link rel="stylesheet" href="/css/query.css">
+    <link rel="stylesheet" href="/css/chat.css">
+</head>
+<body data-page="query">
+    {{template "navbar" .}}
+    <main class="query-detail-page">
+        <div class="query-detail-header">
+            <div class="container">
+                <h1 class="query-detail-title">Hi, how can we help?</h1>
+                <div class="query-search">
+                    <div class="query-search-box">
+                        <svg class="query-search-icon" viewBox="0 0 24 24" fill="none">
+                            <g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M15.7955 15.8111L21 21M18 10.5C18 14.6421 14.6421 18 10.5 18C6.35786 18 3 14.6421 3 10.5C3 6.35786 6.35786 3 10.5 3C14.6421 3 18 6.35786 18 10.5Z" stroke="#2977f5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> </g>
+                        </svg>
+                        <input class="query-search-input" type="search" placeholder="Ask Anything" aria-label="Search queries">
+                    </div>
+                </div>
+                <p class="query-detail-subtitle">Exun 2025</p>
+            </div>
+        </div>
+    </main>
+    {{template "footer" .}}
+    {{template "chat" .}}
+    <script src="/js/api.js"></script>
+    <script src="/js/utils.js"></script>
+    <script src="/js/navigation.js"></script>
+    <script src="/js/query.js"></script>
+</body>
+</html>
