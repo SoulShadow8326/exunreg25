@@ -1,12 +1,13 @@
 package templates
 
 import (
+	"encoding/json"
 	"html/template"
+	"io/ioutil"
 	"net/http"
 	"path/filepath"
 	"strings"
-
-	"exunreg25/handlers"
+	"time"
 )
 
 var templates *template.Template
@@ -18,6 +19,7 @@ type TemplateData struct {
 	IsEvents         bool
 	IsBrochure       bool
 	IsQuery          bool
+	Logs             []LogItem
 	BrochureMarkdown string
 	BrochureNavHTML  template.HTML
 	BrochureTOC      string
@@ -52,6 +54,13 @@ type User struct {
 type Participant struct {
 	Name  string `json:"name"`
 	Class int    `json:"class"`
+}
+
+type LogItem struct {
+	ID        int       `json:"id"`
+	Reason    string    `json:"reason"`
+	Content   string    `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type Summary struct {
@@ -132,35 +141,86 @@ func RenderTemplate(w http.ResponseWriter, templateName string, data TemplateDat
 }
 
 func LoadEventsFromJSON() ([]Event, error) {
-	dbEvents, err := handlers.GetAllEventsData()
-	if err != nil {
+	paths := []string{"frontend/data/events.json", "data/events.json"}
+	var b []byte
+	var err error
+	for _, p := range paths {
+		if bb, e := ioutil.ReadFile(p); e == nil {
+			b = bb
+			break
+		} else {
+			err = e
+		}
+	}
+	if b == nil {
 		return nil, err
 	}
-
+	var raw []map[string]interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return nil, err
+	}
 	var events []Event
-	for _, ev := range dbEvents {
-		img := ev.Image
-		if !strings.HasPrefix(img, "/") {
+	for _, ev := range raw {
+		id := ""
+		name := ""
+		img := ""
+		mode := ""
+		participants := 0
+		descShort := ""
+		descLong := ""
+		points := 0
+		eligibility := ""
+		dates := ""
+		if v, ok := ev["id"].(string); ok {
+			id = v
+		}
+		if v, ok := ev["name"].(string); ok {
+			name = v
+		}
+		if v, ok := ev["image"].(string); ok {
+			img = v
+		}
+		if v, ok := ev["mode"].(string); ok {
+			mode = v
+		}
+		if v, ok := ev["participants"].(float64); ok {
+			participants = int(v)
+		}
+		if v, ok := ev["description_short"].(string); ok {
+			descShort = v
+		}
+		if v, ok := ev["description_long"].(string); ok {
+			descLong = v
+		}
+		if v, ok := ev["points"].(float64); ok {
+			points = int(v)
+		}
+		if v, ok := ev["eligibility"].(string); ok {
+			eligibility = v
+		}
+		if v, ok := ev["dates"].(string); ok {
+			dates = v
+		}
+		if img != "" && !strings.HasPrefix(img, "/") {
 			img = "/illustrations/" + img
 		}
 		events = append(events, Event{
-			ID:               ev.ID,
-			Name:             ev.Name,
-			Slug:             ev.ID,
+			ID:               id,
+			Name:             name,
+			Slug:             id,
 			Image:            img,
-			Mode:             ev.Mode,
-			Participants:     ev.Participants,
+			Mode:             mode,
+			Participants:     participants,
 			MaxParticipants:  0,
 			IsRegistered:     false,
-			DescriptionShort: ev.DescriptionShort,
-			DescriptionLong:  ev.DescriptionLong,
-			EligibilityText:  ev.Eligibility,
-			Points:           ev.Points,
-			Individual:       ev.IndependentRegistration,
-			Dates:            ev.Dates,
+			DescriptionShort: descShort,
+			DescriptionLong:  descLong,
+			EligibilityText:  eligibility,
+			Points:           points,
+			Individual:       false,
+			Dates:            dates,
 		})
 	}
-
 	return events, nil
 }
 

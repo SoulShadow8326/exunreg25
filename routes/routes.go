@@ -421,6 +421,9 @@ func SetupRoutes() *http.ServeMux {
 	adminImportEventsHandler := http.HandlerFunc(handlers.ImportEvents)
 	mux.Handle("/api/admin/import_events", middleware.AuthRequired(adminImportEventsHandler))
 
+	logPageHandler := http.HandlerFunc(handlers.LogPageHandler)
+	mux.Handle("/log", middleware.AuthRequired(logPageHandler))
+
 	mux.HandleFunc("/admin", func(w http.ResponseWriter, r *http.Request) {
 		data := getTemplateData(r)
 		if !data.IsAuthenticated || !data.IsAdmin {

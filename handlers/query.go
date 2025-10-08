@@ -3,12 +3,16 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
+
+	"exunreg25/db"
 
 	"google.golang.org/genai"
 )
@@ -42,18 +46,18 @@ func loadSystemPrompt() (string, error) {
 func loadFallbackMessage() string {
 	b, err := os.ReadFile(filepath.Join("handlers", "bot.json"))
 	if err != nil {
-		return "I’m not sure about that. Please reach out to exun@dpsrkp.net for further assistance."
+		return "I may not be able to help with that. Please reach out to exun@dpsrkp.net regarding the query."
 	}
 	var data map[string]any
 	if err := json.Unmarshal(b, &data); err != nil {
-		return "I’m not sure about that. Please reach out to exun@dpsrkp.net for further assistance."
+		return "I may not be able to help with that. Please reach out to exun@dpsrkp.net regarding the query."
 	}
 	if fp, ok := data["fallback_policy"].(map[string]any); ok {
 		if msg, ok := fp["fallback_message"].(string); ok && msg != "" {
 			return msg
 		}
 	}
-	return "I’m not sure about that. Please reach out to exun@dpsrkp.net for further assistance."
+	return "I may not be able to help with that. Please reach out to exun@dpsrkp.net regarding the query."
 }
 
 func loadEventsData() (string, error) {
@@ -64,6 +68,16 @@ func loadEventsData() (string, error) {
 		}
 	}
 	return "[]", nil
+}
+
+func loadInviteData() (string, error) {
+	paths := []string{"frontend/data/invite.md", "data/invite.md"}
+	for _, p := range paths {
+		if b, err := os.ReadFile(p); err == nil {
+			return string(b), nil
+		}
+	}
+	return "", nil
 }
 
 var injectionRe = regexp.MustCompile(`(?i)(select\s+.*from|drop\s+table|insert\s+into|delete\s+from|--|;|\bunion\b|\bexec\b|\bexec\(|\bpasswd\b|\bpassword\b|\boutput\b)`)
@@ -101,6 +115,17 @@ func sanitizeQuery(q string) (string, bool) {
 	return cleaned, true
 }
 
+func logRejection(reason, content string) {
+	if globalDB != nil {
+		_ = globalDB.Create("logs", &db.LogEntry{Reason: reason, Content: content, CreatedAt: time.Now()})
+		fmt.Printf("[rejection][db] reason=%s content=%q\n", reason, content)
+		return
+	}
+	t := time.Now().UTC().Format(time.RFC3339)
+	line := fmt.Sprintf("%s\t%s\t%q\n", t, reason, content)
+	fmt.Printf("[rejection] %s", line)
+}
+
 func QueryHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -120,30 +145,58 @@ func QueryHandler(w http.ResponseWriter, r *http.Request) {
 
 	cleaned, ok := sanitizeQuery(req.Query)
 	if !ok || cleaned == "" {
-		resp := llmResponse{Answer: "I’m not sure about that. Please reach out to exun@dpsrkp.net for further assistance.", Source: "policy"}
+		logRejection("sanitize_failed", req.Query)
+		resp := llmResponse{Answer: "I may not be able to help with that. Please reach out to exun@dpsrkp.net regarding the query.", Source: "policy"}
+		if globalDB != nil {
+			payload := map[string]string{"query": req.Query, "answer": resp.Answer, "status": "sanitize_failed"}
+			if b, err := json.Marshal(payload); err == nil {
+				_ = globalDB.Create("logs", &db.LogEntry{Reason: "query", Content: string(b), CreatedAt: time.Now()})
+			}
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resp)
 		return
 	}
 
 	if dumpRe.MatchString(cleaned) || ackRe.MatchString(cleaned) {
+		logRejection("dump_or_ack_in_query", cleaned)
 		fallback := loadFallbackMessage()
 		resp := llmResponse{Answer: fallback, Source: "policy"}
+		if globalDB != nil {
+			payload := map[string]string{"query": cleaned, "answer": resp.Answer, "status": "dump_or_ack_in_query"}
+			if b, err := json.Marshal(payload); err == nil {
+				_ = globalDB.Create("logs", &db.LogEntry{Reason: "query", Content: string(b), CreatedAt: time.Now()})
+			}
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resp)
 		return
 	}
 	if jailbreakRe.MatchString(cleaned) {
+		logRejection("jailbreak_in_query", cleaned)
 		fallback := loadFallbackMessage()
 		resp := llmResponse{Answer: fallback, Source: "policy"}
+		if globalDB != nil {
+			payload := map[string]string{"query": cleaned, "answer": resp.Answer, "status": "jailbreak_in_query"}
+			if b, err := json.Marshal(payload); err == nil {
+				_ = globalDB.Create("logs", &db.LogEntry{Reason: "query", Content: string(b), CreatedAt: time.Now()})
+			}
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resp)
 		return
 	}
 
 	if roleRe.MatchString(cleaned) || legalRe.MatchString(cleaned) || conditionalRe.MatchString(cleaned) || encodingRe.MatchString(cleaned) || splitRe.MatchString(cleaned) || roleplayRe.MatchString(cleaned) || testRe.MatchString(cleaned) || reverseRe.MatchString(cleaned) || tokenCountRe.MatchString(cleaned) || socialProofRe.MatchString(cleaned) || attachRe.MatchString(cleaned) {
+		logRejection("heuristic_in_query", cleaned)
 		fallback := loadFallbackMessage()
 		resp := llmResponse{Answer: fallback, Source: "policy"}
+		if globalDB != nil {
+			payload := map[string]string{"query": cleaned, "answer": resp.Answer, "status": "heuristic_in_query"}
+			if b, err := json.Marshal(payload); err == nil {
+				_ = globalDB.Create("logs", &db.LogEntry{Reason: "query", Content: string(b), CreatedAt: time.Now()})
+			}
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resp)
 		return
@@ -155,6 +208,7 @@ func QueryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	eventsData, _ := loadEventsData()
+	inviteData, _ := loadInviteData()
 
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
@@ -168,6 +222,10 @@ func QueryHandler(w http.ResponseWriter, r *http.Request) {
 	sb.WriteString(systemPrompt)
 	sb.WriteString("\n\nDataset: ")
 	sb.WriteString(eventsData)
+	if inviteData != "" {
+		sb.WriteString("\n\nInvite: ")
+		sb.WriteString(inviteData)
+	}
 	sb.WriteString("\n\nUser query: ")
 	sb.WriteString(cleaned)
 
@@ -186,23 +244,44 @@ func QueryHandler(w http.ResponseWriter, r *http.Request) {
 
 	lower := strings.ToLower(answer)
 	if injectionRe.MatchString(answer) || strings.Contains(lower, "secret") || strings.Contains(lower, "api_key") || strings.Contains(lower, "password") || strings.Contains(lower, "private") {
+		logRejection("sensitive_in_answer", answer)
 		fallback := loadFallbackMessage()
 		resp := llmResponse{Answer: fallback, Source: "policy"}
+		if globalDB != nil {
+			payload := map[string]string{"query": cleaned, "answer": resp.Answer, "status": "sensitive_in_answer"}
+			if b, err := json.Marshal(payload); err == nil {
+				_ = globalDB.Create("logs", &db.LogEntry{Reason: "query", Content: string(b), CreatedAt: time.Now()})
+			}
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resp)
 		return
 	}
 	if dumpRe.MatchString(answer) || ackRe.MatchString(answer) || jailbreakRe.MatchString(answer) || base64OutputRe.MatchString(answer) {
+		logRejection("dump_in_answer", answer)
 		fallback := loadFallbackMessage()
 		resp := llmResponse{Answer: fallback, Source: "policy"}
+		if globalDB != nil {
+			payload := map[string]string{"query": cleaned, "answer": resp.Answer, "status": "dump_in_answer"}
+			if b, err := json.Marshal(payload); err == nil {
+				_ = globalDB.Create("logs", &db.LogEntry{Reason: "query", Content: string(b), CreatedAt: time.Now()})
+			}
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resp)
 		return
 	}
 
 	if roleRe.MatchString(answer) || legalRe.MatchString(answer) || conditionalRe.MatchString(answer) || encodingRe.MatchString(answer) || splitRe.MatchString(answer) || roleplayRe.MatchString(answer) || testRe.MatchString(answer) || reverseRe.MatchString(answer) || tokenCountRe.MatchString(answer) || socialProofRe.MatchString(answer) || attachRe.MatchString(answer) || htmlRe.MatchString(answer) || hexOutputRe.MatchString(answer) || emailRe.MatchString(answer) {
+		logRejection("heuristic_in_answer", answer)
 		fallback := loadFallbackMessage()
 		resp := llmResponse{Answer: fallback, Source: "policy"}
+		if globalDB != nil {
+			payload := map[string]string{"query": cleaned, "answer": resp.Answer, "status": "heuristic_in_answer"}
+			if b, err := json.Marshal(payload); err == nil {
+				_ = globalDB.Create("logs", &db.LogEntry{Reason: "query", Content: string(b), CreatedAt: time.Now()})
+			}
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resp)
 		return
@@ -210,19 +289,37 @@ func QueryHandler(w http.ResponseWriter, r *http.Request) {
 	if strings.Count(answer, ",") > 8 || len(answer) > 2000 {
 		fallback := loadFallbackMessage()
 		resp := llmResponse{Answer: fallback, Source: "policy"}
+		if globalDB != nil {
+			payload := map[string]string{"query": cleaned, "answer": resp.Answer, "status": "length_or_commas"}
+			if b, err := json.Marshal(payload); err == nil {
+				_ = globalDB.Create("logs", &db.LogEntry{Reason: "query", Content: string(b), CreatedAt: time.Now()})
+			}
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resp)
 		return
 	}
-	if strings.Contains(answer, "{\")") || strings.Contains(answer, "\":") {
+	if strings.Contains(answer, "{\"") || strings.Contains(answer, "\":") {
 		fallback := loadFallbackMessage()
 		resp := llmResponse{Answer: fallback, Source: "policy"}
+		if globalDB != nil {
+			payload := map[string]string{"query": cleaned, "answer": resp.Answer, "status": "looks_like_json"}
+			if b, err := json.Marshal(payload); err == nil {
+				_ = globalDB.Create("logs", &db.LogEntry{Reason: "query", Content: string(b), CreatedAt: time.Now()})
+			}
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resp)
 		return
 	}
 
 	resp := llmResponse{Answer: answer, Source: "llm"}
+	if globalDB != nil {
+		payload := map[string]string{"query": cleaned, "answer": resp.Answer, "status": "ok"}
+		if b, err := json.Marshal(payload); err == nil {
+			_ = globalDB.Create("logs", &db.LogEntry{Reason: "query", Content: string(b), CreatedAt: time.Now()})
+		}
+	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(resp)
 }

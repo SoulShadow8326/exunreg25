@@ -92,11 +92,39 @@ function setupChatSignalHandlers() {
 
 document.addEventListener('DOMContentLoaded', function () {
   setupChatSignalHandlers();
+  (async function loadFAQ(){
+    try{
+      const resp = await fetch('/data/faq.json');
+      if(!resp.ok) return;
+      const j = await resp.json();
+      const container = document.getElementById('faqContainer');
+      if(!container || !j || !j.faq) return;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'faq-wrapper';
+      j.faq.forEach(item => {
+        const q = document.createElement('div');
+        q.className = 'faq-item';
+        const qh = document.createElement('h3');
+        qh.className = 'faq-question';
+        qh.textContent = item.question || '';
+        const qa = document.createElement('p');
+        qa.className = 'faq-answer';
+        qa.textContent = (item.answer || '').replace(/\*\*/g,'');
+        q.appendChild(qh);
+        q.appendChild(qa);
+        wrapper.appendChild(q);
+      });
+      container.appendChild(wrapper);
+    }catch(e){
+    }
+  })();
 
   const form = document.getElementById('query-form');
   const input = document.getElementById('query-input');
   const results = document.getElementById('results');
   const clearBtn = document.getElementById('clear-btn');
+  const headerSearchInput = document.querySelector('.query-search-input');
+  const headerSearchBtn = document.getElementById('querySearchBtn');
 
   const examples = Array.from(document.querySelectorAll('.examples .filter-btn'));
   examples.forEach(btn => btn.addEventListener('click', () => {
@@ -111,6 +139,27 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!q) return;
       sendQuery(q);
       input.value = '';
+    });
+  }
+
+  if (headerSearchInput) {
+    headerSearchInput.addEventListener('keydown', function(e){
+      if (e.key === 'Enter'){
+        const q = headerSearchInput.value.trim();
+        if (!q) return;
+        chatSignal.setValue('open');
+        sendQuery(q);
+        headerSearchInput.value = '';
+      }
+    });
+  }
+  if (headerSearchBtn) {
+    headerSearchBtn.addEventListener('click', function(){
+      const q = headerSearchInput ? headerSearchInput.value.trim() : '';
+      if (!q) return;
+      chatSignal.setValue('open');
+      sendQuery(q);
+      headerSearchInput.value = '';
     });
   }
 
@@ -171,12 +220,32 @@ document.addEventListener('DOMContentLoaded', function () {
     const msg = document.createElement('div');
     msg.className = 'chat-message';
     if (from === 'user') msg.classList.add('user');
+    else msg.classList.add('admin');
     const content = document.createElement('div');
     content.className = 'chat-message-content';
     content.textContent = text;
     msg.appendChild(content);
     container.appendChild(msg);
     container.scrollTop = container.scrollHeight;
+  }
+
+  function stripMarkdown(md) {
+    if (!md) return md;
+    let s = md;
+    s = s.replace(/```[\s\S]*?```/g, '');
+    s = s.replace(/`([^`]*)`/g, '$1');
+    s = s.replace(/!\[([^\]]*)\]\([^\)]*\)/g, '$1');
+    s = s.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1');
+    s = s.replace(/(^|\n)#{1,6}\s*(.*)/g, '$1$2');
+    s = s.replace(/(\*\*|__)(.*?)\1/g, '$2');
+    s = s.replace(/(\*|_)(.*?)\1/g, '$2');
+    s = s.replace(/(^|\n)>\s?/g, '$1');
+    s = s.replace(/(^|\n)[\-\*\+]\s+/g, '$1');
+    s = s.replace(/(^|\n)\d+\.\s+/g, '$1');
+    s = s.replace(/\r\n/g, '\n');
+    s = s.replace(/\n{2,}/g, '\n\n');
+    s = s.trim();
+    return s;
   }
 
   async function sendQuery(q) {
@@ -206,7 +275,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       }
       if (data && data.answer) {
-        renderChatMessage(data.answer, 'bot');
+        renderChatMessage(stripMarkdown(data.answer), 'bot');
       } else {
         renderChatMessage('No answer returned.', 'bot');
       }

@@ -1,0 +1,37 @@
+.log-container {
+  max-width: 1100px;
+  margin: 40px auto;
+  padding: 20px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+.log-controls {
+  display:flex;
+  gap:12px;
+  align-items:center;
+  margin-bottom:12px;
+}
+.log-table {
+  width:100%;
+  border-collapse:collapse;
+}
+.log-table th, .log-table td {
+  padding:10px 12px;
+  border-bottom:1px solid #eee;
+  text-align:left;
+  font-family: 'Raleway', sans-serif;
+}
+.log-table th {
+  background:#fafafa;
+  font-weight:600;
+}
+.log-reason {
+  color:#bf3b3b;
+  font-weight:600;
+}
+.log-content {
+  white-space:pre-wrap;
+  word-break:break-word;
+  max-width:600px;
+}
