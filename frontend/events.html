@@ -12,6 +12,8 @@
     <link rel="stylesheet" href="/css/events.css">
     <link rel="stylesheet" href="/css/event-card.css">
     <link rel="stylesheet" href="/css/toast.css">
+    <link rel="stylesheet" href="/css/query.css">
+    <link rel="stylesheet" href="/css/chat.css">
 </head>
 <body data-page="events">
     {{template "navbar" .}}
@@ -55,17 +57,18 @@
     </main>
     
     {{template "footer" .}}
-    
+
     {{if .Events}}
     <script>console.log('SSR: template .Events present, count={{len .Events}}');</script>
     {{else}}
     <script>console.error('SSR: template .Events missing or empty');</script>
     {{end}}
     <script>document.addEventListener('DOMContentLoaded', function(){ console.log('DOM: event-card count=', document.querySelectorAll('.event-card').length); });</script>
-
+    {{template "chat" .}}
     <script src="/js/api.js"></script>
     <script src="/js/utils.js"></script>
     <script src="/js/navigation.js"></script>
     <script src="/js/events.js"></script>
+    <script src="/js/query.js"></script>
 </body>
 </html>

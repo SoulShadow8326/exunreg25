@@ -711,7 +711,7 @@ class SummaryPage {
                             if (member) {
                                 rendered.push(`<div class="team-member">${member.name || member.Name || ''} (${member.email || member.Email || ''})</div>`);
                             } else {
-                                rendered.push(`<div class="team-member">TBD</div>`);
+                                rendered.push(`<div class="team-member">N/A</div>`);
                             }
                         }
                         return rendered.join('');
