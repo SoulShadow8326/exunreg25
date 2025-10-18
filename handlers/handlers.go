@@ -376,6 +376,7 @@ var globalDB *db.Database
 
 func SetGlobalDB(database *db.Database) {
 	globalDB = database
+	go startSheetsSync(database)
 }
 
 func GetAllEventsData() ([]db.Event, error) {

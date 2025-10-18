@@ -399,6 +399,22 @@ func SetupRoutes() *http.ServeMux {
 	adminDeleteEventHandler := http.HandlerFunc(handlers.DeleteEvent)
 	mux.Handle("/api/admin/events/delete/", middleware.AuthRequired(adminDeleteEventHandler))
 
+	syncSheetsHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		email := middleware.GetEmailFromCookie(r)
+		if !handlers.IsAdminEmail(email) {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+		if err := handlers.TriggerSheetsSync(); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok","message":"sync triggered"}`))
+	})
+	mux.Handle("/api/admin/sync-sheets", middleware.AuthRequired(syncSheetsHandler))
+
 	adminUserDetailsHandler := http.HandlerFunc(handlers.GetUserDetails)
 	mux.Handle("/api/admin/users", middleware.AuthRequired(adminUserDetailsHandler))
 
