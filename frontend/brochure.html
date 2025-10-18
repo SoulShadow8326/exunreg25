@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="/css/footer.css">
     <link rel="stylesheet" href="/css/brochure.css">
     <link rel="stylesheet" href="/css/toast.css">
+    <link rel="stylesheet" href="/css/query.css">
+    <link rel="stylesheet" href="/css/chat.css">
 </head>
 <body data-page="brochure">
     {{template "navbar" .}}
@@ -37,6 +39,7 @@
     </main>
     
     {{template "footer" .}}
+    {{template "chat" .}}
     <script type="text/plain" id="raw-markdown-source" style="display:none">{{.BrochureMarkdown}}</script>
     <script id="brochure-toc-json" type="application/json">{{.BrochureTOC}}</script>
     <script id="brochure-scroll-to" type="text/plain" style="display:none">{{.BrochureScrollTo}}</script>
@@ -171,6 +174,6 @@
             console.error('Failed to render brochure markdown', e);
         }
     </script>
-    
+    <script src="/js/query.js"></script>
 </body>
 </html>

@@ -17,6 +17,7 @@ type TemplateData struct {
 	IsHome           bool
 	IsEvents         bool
 	IsBrochure       bool
+	IsQuery          bool
 	BrochureMarkdown string
 	BrochureNavHTML  template.HTML
 	BrochureTOC      string
@@ -106,6 +107,10 @@ func InitTemplates() error {
 
 	for _, tmpl := range componentTemplates.Templates() {
 		templates.AddParseTree(tmpl.Name(), tmpl.Tree)
+	}
+
+	if _, err := templates.New("chat").ParseFiles("frontend/components/chat.html"); err != nil {
+		return err
 	}
 
 	return nil

@@ -120,6 +120,13 @@ type IndividualRegistration struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type LogEntry struct {
+	ID        int       `json:"id"`
+	Reason    string    `json:"reason"`
+	Content   string    `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 func NewConnection(dbPath string) (*Database, error) {
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
@@ -222,6 +229,18 @@ func (db *Database) InitTables() error {
 		return fmt.Errorf("error creating individual_registrations table: %v", err)
 	}
 
+	createLogsTable := `
+	CREATE TABLE IF NOT EXISTS logs (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		reason TEXT NOT NULL,
+		content TEXT,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);`
+
+	if _, err := db.Exec(createLogsTable); err != nil {
+		return fmt.Errorf("error creating logs table: %v", err)
+	}
+
 	if _, err := db.Exec(createIndexes); err != nil {
 		return fmt.Errorf("error creating indexes: %v", err)
 	}
@@ -242,6 +261,7 @@ WHERE typeof(individual) = 'text';`
 	}
 
 	return nil
+
 }
 
 func (db *Database) Get(entity string, key string) (interface{}, error) {
@@ -372,6 +392,18 @@ func (db *Database) Create(entity string, data interface{}) error {
 		_, err := db.Exec(query, ir.UserID, ir.Fullname, ir.UserEmail, now, now)
 		if err != nil {
 			log.Printf("db.Create(individual_registrations) error: %v", err)
+		}
+		return err
+
+	case "logs":
+		le, ok := data.(*LogEntry)
+		if !ok {
+			return fmt.Errorf("invalid log data")
+		}
+		query := `INSERT INTO logs (reason, content, created_at) VALUES (?, ?, ?)`
+		_, err := db.Exec(query, le.Reason, le.Content, now)
+		if err != nil {
+			log.Printf("db.Create(logs) error: %v", err)
 		}
 		return err
 
@@ -569,6 +601,34 @@ func (db *Database) GetAll(entity string) ([]interface{}, error) {
 			irs = append(irs, ir)
 		}
 		return irs, nil
+
+	case "logs":
+		query := `SELECT id, reason, content, created_at FROM logs ORDER BY created_at DESC`
+		rows, err := db.Query(query)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		var logs []interface{}
+		for rows.Next() {
+			le := &LogEntry{}
+			var createdAtStr string
+			if err := rows.Scan(&le.ID, &le.Reason, &le.Content, &createdAtStr); err != nil {
+				return nil, err
+			}
+			t, err := time.Parse("2006-01-02 15:04:05", createdAtStr)
+			if err != nil {
+				le.CreatedAt = time.Now()
+			} else {
+				le.CreatedAt = t
+			}
+			logs = append(logs, le)
+		}
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+		return logs, nil
 
 	default:
 		return nil, fmt.Errorf("unknown entity: %s", entity)

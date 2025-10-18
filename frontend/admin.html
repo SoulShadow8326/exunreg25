@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="/css/footer.css">
     <link rel="stylesheet" href="/css/admin.css">
     <link rel="stylesheet" href="/css/toast.css">
+    <link rel="stylesheet" href="/css/query.css">
+    <link rel="stylesheet" href="/css/chat.css">
 </head>
 <body data-page="admin">
     {{template "navbar" .}}
@@ -83,7 +85,7 @@
     </main>
     
     {{template "footer" .}}
-    
+    {{template "chat" .}}
     <div id="admin-modal" class="admin-modal">
         <div class="admin-modal__content" id="modal-content">
         </div>
@@ -93,6 +95,7 @@
     <script src="/js/utils.js"></script>
     <script src="/js/navigation.js"></script>
     <script src="/js/admin.js"></script>
+    <script src="/js/query.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         if (document.body && document.body.getAttribute('data-page') === 'admin') {

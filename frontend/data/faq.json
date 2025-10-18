@@ -1,0 +1,44 @@
+{
+  "faq": [
+    {
+      "question": "What is the Exun 2025 Symposium?",
+      "answer": "Exun 2025 is the 30th annual international technology symposium hosted by the student-run Computer Science and technology club, Exun Clan, of Delhi Public School, R.K. Puram. It brings together STEM enthusiasts for technology competitions and collaborative experiences."
+    },
+    {
+      "question": "When is Exun 2025 being held?",
+      "answer": "The symposium will be held during 'Exun Week' from **November 2nd to 10th, 2025**. Preliminary/Online rounds are scheduled from **October 27th to November 6th**, and Onsite Events are on **November 9th and 10th**."
+    },
+    {
+      "question": "What are the main registration deadlines?",
+      "answer": "The last date for Online registration for events **without** preliminary rounds is **November 6th, 2025, 11:59 PM IST**. For events **with** a preliminary round, registration closes **12 hours** before the submission deadline of that round."
+    },
+    {
+      "question": "Where can I register for Exun 2025?",
+      "answer": "Registration can be done on the official website: **reg.exunclan.com**."
+    },
+    {
+      "question": "What types of events are offered at Exun 2025?",
+      "answer": "There are **23 events** covering disciplines like: **Creative Fields** (Web & App development, 2D & 3D Design via 'Build' events), **Technical Fields** (Machine Learning via 'ExML', Computational Linguistics via 'Turing Test', Competitive Programming), **Quizzing** ('Quiz', 'Crossword'), and events in partnership with other clubs (Gaming, Robotics, Cubing)."
+    },
+    {
+      "question": "What is 'Sudocrypt'?",
+      "answer": "Sudocrypt v15.0 is Exun Clan's flagship event, which is an annual international **36-hour Capture The Flag (CTF) and Cryptic Hunt**. It challenges participants' cryptography, problem-solving, and analytical skills."
+    },
+    {
+      "question": "What is the difference between School Participation and Independent Participation?",
+      "answer": "In **School Participation**, points won contribute towards the school's overall trophy tally. **Independent Participation** is for teams/individuals without school affiliation. Independent participation is **only allowed for events that are completely online** (Sudocrypt, ExML, Turing Test, Build: Unreality, and Competitive Programming Prelims)."
+    },
+    {
+      "question": "How can my school receive the official invitation?",
+      "answer": "If your school has not received an official email, the school's email and name should be submitted to **exun@dpsrkp.net**."
+    },
+    {
+      "question": "What are the rules regarding plagiarism?",
+      "answer": "**Plagiarism is strictly prohibited for all events** under Exun 2025 and may lead to disqualification from the specific event."
+    },
+    {
+      "question": "Can I be part of multiple teams for the same event?",
+      "answer": "No, **no participant may be part of multiple teams for a single event**."
+    }
+  ]
+}
