@@ -88,7 +88,8 @@ func syncAllTablesToSheets(database *db.Database) error {
 		}
 
 		sheetName := t
-		if err := ensureSheetExists(ctx, srv, spreadsheetID, sheetName); err != nil {
+		sheetId, err := ensureSheetExists(ctx, srv, spreadsheetID, sheetName)
+		if err != nil {
 			log.Printf("failed to ensure sheet %s exists: %v", sheetName, err)
 			continue
 		}
@@ -99,6 +100,36 @@ func syncAllTablesToSheets(database *db.Database) error {
 		if err != nil {
 			log.Printf("failed to update sheet %s: %v", sheetName, err)
 			continue
+		}
+
+		if len(rows) > 0 {
+			colsCount := len(rows[0])
+			requests := []*sheets.Request{}
+			updateGrid := &sheets.UpdateSheetPropertiesRequest{
+				Properties: &sheets.SheetProperties{
+					SheetId: sheetId,
+					GridProperties: &sheets.GridProperties{
+						FrozenRowCount: 1,
+					},
+				},
+				Fields: "gridProperties.frozenRowCount",
+			}
+			requests = append(requests, &sheets.Request{UpdateSheetProperties: updateGrid})
+
+			repeat := &sheets.Request{RepeatCell: &sheets.RepeatCellRequest{
+				Range: &sheets.GridRange{
+					SheetId:          sheetId,
+					StartRowIndex:    0,
+					EndRowIndex:      1,
+					StartColumnIndex: 0,
+					EndColumnIndex:   int64(colsCount),
+				},
+				Cell:   &sheets.CellData{UserEnteredFormat: &sheets.CellFormat{TextFormat: &sheets.TextFormat{Bold: true}}},
+				Fields: "userEnteredFormat.textFormat.bold",
+			}}
+			requests = append(requests, repeat)
+			batch := &sheets.BatchUpdateSpreadsheetRequest{Requests: requests}
+			_, _ = srv.Spreadsheets.BatchUpdate(spreadsheetID, batch).Context(ctx).Do()
 		}
 	}
 
@@ -176,20 +207,35 @@ func convertToValues(rows [][]interface{}) [][]interface{} {
 	return vals
 }
 
-func ensureSheetExists(ctx context.Context, srv *sheets.Service, spreadsheetID, sheetName string) error {
+func ensureSheetExists(ctx context.Context, srv *sheets.Service, spreadsheetID, sheetName string) (int64, error) {
 	ss, err := srv.Spreadsheets.Get(spreadsheetID).Fields("sheets.properties").Do()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	for _, s := range ss.Sheets {
 		if s.Properties.Title == sheetName {
-			return nil
+			return s.Properties.SheetId, nil
 		}
 	}
 	addReq := &sheets.Request{AddSheet: &sheets.AddSheetRequest{Properties: &sheets.SheetProperties{Title: sheetName}}}
 	batch := &sheets.BatchUpdateSpreadsheetRequest{Requests: []*sheets.Request{addReq}}
-	_, err = srv.Spreadsheets.BatchUpdate(spreadsheetID, batch).Context(ctx).Do()
-	return err
+	resp, err := srv.Spreadsheets.BatchUpdate(spreadsheetID, batch).Context(ctx).Do()
+	if err != nil {
+		return 0, err
+	}
+	if len(resp.Replies) > 0 && resp.Replies[0].AddSheet != nil && resp.Replies[0].AddSheet.Properties != nil {
+		return resp.Replies[0].AddSheet.Properties.SheetId, nil
+	}
+	ss2, err := srv.Spreadsheets.Get(spreadsheetID).Fields("sheets.properties").Do()
+	if err != nil {
+		return 0, err
+	}
+	for _, s := range ss2.Sheets {
+		if s.Properties.Title == sheetName {
+			return s.Properties.SheetId, nil
+		}
+	}
+	return 0, fmt.Errorf("failed to get sheet id for %s", sheetName)
 }
 
 func TriggerSheetsSync() error {

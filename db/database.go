@@ -183,23 +183,8 @@ func (db *Database) InitTables() error {
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`
 
-	createRegistrationsTable := `
-	CREATE TABLE IF NOT EXISTS registrations (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		event_id TEXT NOT NULL,
-		user_id INTEGER NOT NULL,
-		team_name TEXT,
-		status TEXT DEFAULT 'pending',
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		FOREIGN KEY (event_id) REFERENCES events (id),
-		FOREIGN KEY (user_id) REFERENCES users (id)
-	);`
-
 	createIndexes := `
 	CREATE INDEX IF NOT EXISTS idx_events_name ON events(name);
-	CREATE INDEX IF NOT EXISTS idx_registrations_event_user ON registrations(event_id, user_id);
-	CREATE INDEX IF NOT EXISTS idx_registrations_status ON registrations(status);
 	`
 
 	if _, err := db.Exec(createUsersTable); err != nil {
@@ -208,10 +193,6 @@ func (db *Database) InitTables() error {
 
 	if _, err := db.Exec(createEventsTable); err != nil {
 		return fmt.Errorf("error creating events table: %v", err)
-	}
-
-	if _, err := db.Exec(createRegistrationsTable); err != nil {
-		return fmt.Errorf("error creating registrations table: %v", err)
 	}
 
 	createIndividualRegistrationsTable := `
@@ -298,16 +279,6 @@ func (db *Database) Get(entity string, key string) (interface{}, error) {
 		}
 		return event, nil
 
-	case "registrations":
-		query := `SELECT id, event_id, user_id, team_name, status, created_at, updated_at FROM registrations WHERE id = ?`
-		reg := &Registration{}
-		err := db.QueryRow(query, key).Scan(
-			&reg.ID, &reg.EventID, &reg.UserID, &reg.TeamName, &reg.Status, &reg.CreatedAt, &reg.UpdatedAt)
-		if err != nil {
-			return nil, err
-		}
-		return reg, nil
-
 	case "individual_registrations":
 		query := `SELECT id, user_id, fullname, user_email, created_at, updated_at FROM individual_registrations WHERE id = ?`
 		ir := &IndividualRegistration{}
@@ -368,18 +339,6 @@ func (db *Database) Create(entity string, data interface{}) error {
 			event.DescriptionLong, event.DescriptionShort, now, now)
 		if err != nil {
 			log.Printf("db.Create(events) error: %v", err)
-		}
-		return err
-
-	case "registrations":
-		reg, ok := data.(*Registration)
-		if !ok {
-			return fmt.Errorf("invalid registration data")
-		}
-		query := `INSERT INTO registrations (event_id, user_id, team_name, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
-		_, err := db.Exec(query, reg.EventID, reg.UserID, reg.TeamName, reg.Status, now, now)
-		if err != nil {
-			log.Printf("db.Create(registrations) error: %v", err)
 		}
 		return err
 
@@ -448,18 +407,6 @@ func (db *Database) Update(entity string, key string, data interface{}) error {
 		}
 		return err
 
-	case "registrations":
-		reg, ok := data.(*Registration)
-		if !ok {
-			return fmt.Errorf("invalid registration data")
-		}
-		query := `UPDATE registrations SET event_id = ?, user_id = ?, team_name = ?, status = ?, updated_at = ? WHERE id = ?`
-		_, err := db.Exec(query, reg.EventID, reg.UserID, reg.TeamName, reg.Status, now, key)
-		if err != nil {
-			log.Printf("db.Update(registrations) error: %v", err)
-		}
-		return err
-
 	case "individual_registrations":
 		ir, ok := data.(*IndividualRegistration)
 		if !ok {
@@ -486,11 +433,6 @@ func (db *Database) Delete(entity string, key string) error {
 
 	case "events":
 		query := `DELETE FROM events WHERE id = ?`
-		_, err := db.Exec(query, key)
-		return err
-
-	case "registrations":
-		query := `DELETE FROM registrations WHERE id = ?`
 		_, err := db.Exec(query, key)
 		return err
 
@@ -563,25 +505,6 @@ func (db *Database) GetAll(entity string) ([]interface{}, error) {
 			events = append(events, event)
 		}
 		return events, nil
-
-	case "registrations":
-		query := `SELECT id, event_id, user_id, team_name, status, created_at, updated_at FROM registrations`
-		rows, err := db.Query(query)
-		if err != nil {
-			return nil, err
-		}
-		defer rows.Close()
-
-		var registrations []interface{}
-		for rows.Next() {
-			reg := &Registration{}
-			err := rows.Scan(&reg.ID, &reg.EventID, &reg.UserID, &reg.TeamName, &reg.Status, &reg.CreatedAt, &reg.UpdatedAt)
-			if err != nil {
-				return nil, err
-			}
-			registrations = append(registrations, reg)
-		}
-		return registrations, nil
 
 	case "individual_registrations":
 		query := `SELECT id, user_id, fullname, user_email, created_at, updated_at FROM individual_registrations`
