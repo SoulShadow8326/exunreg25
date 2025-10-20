@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"exunreg25/db"
@@ -21,7 +22,7 @@ func startSheetsSync(database *db.Database) {
 	if sheetsResetCh == nil {
 		sheetsResetCh = make(chan struct{}, 1)
 	}
-	interval := 10 * time.Minute
+	interval := 1 * time.Minute
 	timer := time.NewTimer(interval)
 	defer timer.Stop()
 
@@ -80,6 +81,12 @@ func syncAllTablesToSheets(database *db.Database) error {
 		return fmt.Errorf("failed to list tables: %v", err)
 	}
 
+	primaryKeys := map[string]string{
+		"users":                    "email",
+		"events":                   "id",
+		"individual_registrations": "id",
+	}
+
 	for _, t := range tables {
 		rows, err := queryTableRows(database, t)
 		if err != nil {
@@ -94,11 +101,36 @@ func syncAllTablesToSheets(database *db.Database) error {
 			continue
 		}
 
-		vr := &sheets.ValueRange{Values: convertToValues(rows)}
-		rangeA1 := sheetName + "!A1"
-		_, err = srv.Spreadsheets.Values.Update(spreadsheetID, rangeA1, vr).ValueInputOption("RAW").Do()
+		hdr, sheetRows, err := readSheetRows(ctx, srv, spreadsheetID, sheetName)
 		if err != nil {
-			log.Printf("failed to update sheet %s: %v", sheetName, err)
+			log.Printf("failed to read sheet %s: %v", sheetName, err)
+			vr := &sheets.ValueRange{Values: convertToValues(rows)}
+			rangeA1 := sheetName + "!A1"
+			_, err = srv.Spreadsheets.Values.Update(spreadsheetID, rangeA1, vr).ValueInputOption("RAW").Do()
+			if err != nil {
+				log.Printf("failed to update sheet %s: %v", sheetName, err)
+			}
+			continue
+		}
+
+		pk, ok := primaryKeys[t]
+		if ok {
+			if err := applyTableUpserts(database, t, pk, hdr, sheetRows); err != nil {
+				log.Printf("failed to apply upserts for table %s: %v", t, err)
+			}
+			rows, err = queryTableRows(database, t)
+			if err != nil {
+				log.Printf("failed to re-query table %s: %v", t, err)
+				continue
+			}
+		}
+
+		pkForUpdate := ""
+		if p, ok := primaryKeys[t]; ok {
+			pkForUpdate = p
+		}
+		if err := updateOnlyMissingCells(ctx, srv, spreadsheetID, sheetName, pkForUpdate, hdr, sheetRows, rows); err != nil {
+			log.Printf("failed to partially update sheet %s: %v", sheetName, err)
 			continue
 		}
 
@@ -238,6 +270,86 @@ func ensureSheetExists(ctx context.Context, srv *sheets.Service, spreadsheetID, 
 	return 0, fmt.Errorf("failed to get sheet id for %s", sheetName)
 }
 
+func readSheetRows(ctx context.Context, srv *sheets.Service, spreadsheetID, sheetName string) ([]string, [][]string, error) {
+	rng := sheetName + "!A1:Z"
+	resp, err := srv.Spreadsheets.Values.Get(spreadsheetID, rng).Context(ctx).Do()
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(resp.Values) == 0 {
+		return nil, nil, fmt.Errorf("empty sheet")
+	}
+	headerIface := resp.Values[0]
+	headers := make([]string, len(headerIface))
+	for i, h := range headerIface {
+		headers[i] = fmt.Sprintf("%v", h)
+	}
+	rows := [][]string{}
+	for _, r := range resp.Values[1:] {
+		row := make([]string, len(headers))
+		for i := range headers {
+			if i < len(r) {
+				row[i] = fmt.Sprintf("%v", r[i])
+			} else {
+				row[i] = ""
+			}
+		}
+		rows = append(rows, row)
+	}
+	return headers, rows, nil
+}
+
+func applyTableUpserts(database *db.Database, table, pk string, headers []string, rows [][]string) error {
+	if len(headers) == 0 {
+		return fmt.Errorf("no headers")
+	}
+	tx, err := database.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	for _, r := range rows {
+		values := map[string]string{}
+		for i, h := range headers {
+			values[h] = r[i]
+		}
+		keyVal := values[pk]
+		if keyVal == "" {
+			continue
+		}
+		cols := []string{}
+		placeholders := []string{}
+		args := []interface{}{}
+		updates := []string{}
+		for _, h := range headers {
+			cols = append(cols, h)
+			placeholders = append(placeholders, "?")
+			v := values[h]
+			if v == "" {
+				args = append(args, nil)
+			} else {
+				args = append(args, v)
+			}
+			if h != pk {
+				updates = append(updates, fmt.Sprintf("%s = COALESCE(excluded.%s, %s)", h, h, h))
+			}
+		}
+		q := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) ON CONFLICT(%s) DO UPDATE SET %s", table, strings.Join(cols, ", "), strings.Join(placeholders, ", "), pk, strings.Join(updates, ", "))
+		if _, err := tx.Exec(q, args...); err != nil {
+			log.Printf("upsert error table %s key %s: %v", table, keyVal, err)
+			continue
+		}
+	}
+	return nil
+}
+
 func TriggerSheetsSync() error {
 	if globalDB == nil {
 		return fmt.Errorf("database not initialized")
@@ -248,6 +360,93 @@ func TriggerSheetsSync() error {
 	select {
 	case sheetsResetCh <- struct{}{}:
 	default:
+	}
+	return nil
+}
+
+func a1ColumnName(n int) string {
+	name := ""
+	for n >= 0 {
+		ch := rune('A' + (n % 26))
+		name = string([]rune{ch}) + name
+		n = n/26 - 1
+	}
+	return name
+}
+
+func updateOnlyMissingCells(ctx context.Context, srv *sheets.Service, spreadsheetID, sheetName, pk string, headers []string, sheetRows [][]string, dbRows [][]interface{}) error {
+	headerCount := len(headers)
+	sheetMap := map[string]int{}
+	pkIndex := -1
+	if headerCount == 0 {
+		return fmt.Errorf("no headers")
+	}
+	if pk == "" {
+		pk = headers[0]
+	}
+	for i, h := range headers {
+		if strings.EqualFold(h, pk) {
+			pkIndex = i
+			break
+		}
+	}
+	if pkIndex == -1 {
+		pkIndex = 0
+	}
+	for i, r := range sheetRows {
+		if pkIndex < len(r) {
+			sheetMap[r[pkIndex]] = i
+		}
+	}
+
+	valueRanges := []*sheets.ValueRange{}
+	appendRows := [][]interface{}{}
+
+	for ri, dbRow := range dbRows[1:] {
+		pkVal := fmt.Sprintf("%v", dbRow[pkIndex])
+		if pkVal == "" {
+			continue
+		}
+		if sr, exists := sheetMap[pkVal]; exists {
+			for ci := 0; ci < headerCount; ci++ {
+				var sheetVal string
+				if ci < len(sheetRows[sr]) {
+					sheetVal = sheetRows[sr][ci]
+				}
+				dbVal := ""
+				if ci < len(dbRow) {
+					dbVal = fmt.Sprintf("%v", dbRow[ci])
+				}
+				if sheetVal == "" && dbVal != "" {
+					col := a1ColumnName(ci)
+					rowNum := sr + 2
+					rng := fmt.Sprintf("%s!%s%d", sheetName, col, rowNum)
+					vr := &sheets.ValueRange{Range: rng, Values: [][]interface{}{{dbVal}}}
+					valueRanges = append(valueRanges, vr)
+				}
+			}
+		} else {
+			newRow := make([]interface{}, headerCount)
+			for ci := 0; ci < headerCount; ci++ {
+				if ci < len(dbRow) {
+					newRow[ci] = fmt.Sprintf("%v", dbRow[ci])
+				} else {
+					newRow[ci] = ""
+				}
+			}
+			appendRows = append(appendRows, newRow)
+		}
+		_ = ri
+	}
+
+	if len(valueRanges) > 0 {
+		for _, vr := range valueRanges {
+			_, _ = srv.Spreadsheets.Values.Update(spreadsheetID, vr.Range, vr).ValueInputOption("RAW").Context(ctx).Do()
+		}
+	}
+	if len(appendRows) > 0 {
+		appendVR := &sheets.ValueRange{Values: appendRows}
+		_, _ = srv.Spreadsheets.Values.Append(spreadsheetID, sheetName+"!A1", appendVR).ValueInputOption("RAW").InsertDataOption("INSERT_ROWS").Context(ctx).Do()
 	}
 	return nil
 }
