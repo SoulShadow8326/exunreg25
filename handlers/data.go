@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -115,6 +116,25 @@ func syncAllTablesToSheets(database *db.Database) error {
 
 		pk, ok := primaryKeys[t]
 		if ok {
+			pkIndex := -1
+			for i, h := range hdr {
+				if strings.EqualFold(h, pk) {
+					pkIndex = i
+					break
+				}
+			}
+			sheetPKs := make(map[string]bool)
+			for _, r := range sheetRows {
+				if pkIndex >= 0 && pkIndex < len(r) {
+					v := strings.TrimSpace(r[pkIndex])
+					if v != "" {
+						sheetPKs[v] = true
+					}
+				}
+			}
+			if err := deleteDBRowsNotInSheet(database, t, pk, sheetPKs); err != nil {
+				log.Printf("failed to delete missing rows for table %s: %v", t, err)
+			}
 			if err := applyTableUpserts(database, t, pk, hdr, sheetRows); err != nil {
 				log.Printf("failed to apply upserts for table %s: %v", t, err)
 			}
@@ -129,7 +149,7 @@ func syncAllTablesToSheets(database *db.Database) error {
 		if p, ok := primaryKeys[t]; ok {
 			pkForUpdate = p
 		}
-		if err := updateOnlyMissingCells(ctx, srv, spreadsheetID, sheetName, pkForUpdate, hdr, sheetRows, rows); err != nil {
+		if err := updateOnlyMissingCells(ctx, srv, spreadsheetID, sheetName, sheetId, pkForUpdate, hdr, sheetRows, rows); err != nil {
 			log.Printf("failed to partially update sheet %s: %v", sheetName, err)
 			continue
 		}
@@ -350,6 +370,48 @@ func applyTableUpserts(database *db.Database, table, pk string, headers []string
 	return nil
 }
 
+func deleteDBRowsNotInSheet(database *db.Database, table, pk string, sheetPKs map[string]bool) error {
+	q := fmt.Sprintf("SELECT %s FROM %s", pk, table)
+	rows, err := database.Query(q)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	var toDelete []string
+	for rows.Next() {
+		var val sql.NullString
+		if err := rows.Scan(&val); err != nil {
+			return err
+		}
+		if !val.Valid {
+			continue
+		}
+		s := val.String
+		if _, ok := sheetPKs[s]; !ok {
+			toDelete = append(toDelete, s)
+		}
+	}
+	tx, err := database.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+	for _, d := range toDelete {
+		dq := fmt.Sprintf("DELETE FROM %s WHERE %s = ?", table, pk)
+		if _, err := tx.Exec(dq, d); err != nil {
+			log.Printf("failed to delete %s=%s: %v", pk, d, err)
+			continue
+		}
+	}
+	return nil
+}
+
 func TriggerSheetsSync() error {
 	if globalDB == nil {
 		return fmt.Errorf("database not initialized")
@@ -374,7 +436,7 @@ func a1ColumnName(n int) string {
 	return name
 }
 
-func updateOnlyMissingCells(ctx context.Context, srv *sheets.Service, spreadsheetID, sheetName, pk string, headers []string, sheetRows [][]string, dbRows [][]interface{}) error {
+func updateOnlyMissingCells(ctx context.Context, srv *sheets.Service, spreadsheetID, sheetName string, sheetId int64, pk string, headers []string, sheetRows [][]string, dbRows [][]interface{}) error {
 	headerCount := len(headers)
 	sheetMap := map[string]int{}
 	pkIndex := -1
@@ -447,6 +509,23 @@ func updateOnlyMissingCells(ctx context.Context, srv *sheets.Service, spreadshee
 	if len(appendRows) > 0 {
 		appendVR := &sheets.ValueRange{Values: appendRows}
 		_, _ = srv.Spreadsheets.Values.Append(spreadsheetID, sheetName+"!A1", appendVR).ValueInputOption("RAW").InsertDataOption("INSERT_ROWS").Context(ctx).Do()
+	}
+
+	dbCount := len(dbRows) - 1
+	sheetCount := len(sheetRows)
+	if sheetCount > dbCount {
+		start := dbCount + 1
+		end := sheetCount
+		deleteReq := &sheets.DeleteDimensionRequest{
+			Range: &sheets.DimensionRange{
+				SheetId:    sheetId,
+				Dimension:  "ROWS",
+				StartIndex: int64(start + 1),
+				EndIndex:   int64(end + 1),
+			},
+		}
+		batch := &sheets.BatchUpdateSpreadsheetRequest{Requests: []*sheets.Request{{DeleteDimension: deleteReq}}}
+		_, _ = srv.Spreadsheets.BatchUpdate(spreadsheetID, batch).Context(ctx).Do()
 	}
 	return nil
 }
