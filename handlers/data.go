@@ -26,11 +26,11 @@ func startSheetsSync(database *db.Database) {
 	if sheetsResetCh == nil {
 		sheetsResetCh = make(chan struct{}, 1)
 	}
-	interval := 10 * time.Minute
+	interval := 1 * time.Minute
 	timer := time.NewTimer(interval)
 	defer timer.Stop()
 
-	backupInterval := 720 * time.Minute
+	backupInterval := 360 * time.Minute
 	if v := os.Getenv("DRIVE_BACKUP_INTERVAL"); v != "" {
 		if m, err := strconv.Atoi(v); err == nil && m > 0 {
 			backupInterval = time.Duration(m) * time.Minute
@@ -47,25 +47,6 @@ func startSheetsSync(database *db.Database) {
 		select {
 		case <-timer.C:
 			sheetsOpMu.Lock()
-			saJSON := os.Getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
-			if saJSON != "" {
-				if _, err := os.Stat(saJSON); err == nil {
-					b, err := os.ReadFile(saJSON)
-					if err == nil {
-						dbPath := os.Getenv("DB_PATH")
-						if dbPath == "" {
-							dbPath = "./data/exunreg25.db"
-						}
-						log.Printf("starting Drive backup for %s", dbPath)
-						id, err := UploadDBBackupToDrive(b, dbPath)
-						if err != nil {
-							log.Printf("drive backup error: %v", err)
-						} else {
-							log.Printf("drive backup uploaded id: %s", id)
-						}
-					}
-				}
-			}
 			log.Printf("starting sheets sync")
 			if err := syncAllTablesToSheets(database); err != nil {
 				log.Printf("sheets sync error: %v", err)
@@ -542,11 +523,15 @@ func updateOnlyMissingCells(ctx context.Context, srv *sheets.Service, spreadshee
 				if ci < len(dbRow) {
 					dbVal = fmt.Sprintf("%v", dbRow[ci])
 				}
-				if sheetVal == "" && dbVal != "" {
+				writeVal := dbVal
+				if dbVal == "" {
+					writeVal = "''"
+				}
+				if sheetVal == "" {
 					col := a1ColumnName(ci)
 					rowNum := sr + 2
 					rng := fmt.Sprintf("%s!%s%d", sheetName, col, rowNum)
-					vr := &sheets.ValueRange{Range: rng, Values: [][]interface{}{{dbVal}}}
+					vr := &sheets.ValueRange{Range: rng, Values: [][]interface{}{{writeVal}}}
 					valueRanges = append(valueRanges, vr)
 				}
 			}
@@ -554,9 +539,14 @@ func updateOnlyMissingCells(ctx context.Context, srv *sheets.Service, spreadshee
 			newRow := make([]interface{}, headerCount)
 			for ci := 0; ci < headerCount; ci++ {
 				if ci < len(dbRow) {
-					newRow[ci] = fmt.Sprintf("%v", dbRow[ci])
+					dv := fmt.Sprintf("%v", dbRow[ci])
+					if dv == "" {
+						newRow[ci] = "''"
+					} else {
+						newRow[ci] = dv
+					}
 				} else {
-					newRow[ci] = ""
+					newRow[ci] = "''"
 				}
 			}
 			appendRows = append(appendRows, newRow)

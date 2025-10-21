@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -74,6 +75,27 @@ func UploadDBBackupToDrive(_ []byte, dbPath string) (string, error) {
 		return "", fmt.Errorf("failed to create drive service: %v", err)
 	}
 
+	inHashF, err := os.Open(dbPath)
+	if err != nil {
+		return "", err
+	}
+	defer inHashF.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, inHashF); err != nil {
+		return "", err
+	}
+	curHash := fmt.Sprintf("%x", h.Sum(nil))
+
+	hashFile := os.Getenv("BACKUP_HASH_FILE")
+	if hashFile == "" {
+		hashFile = "./last_backup.hash"
+	}
+	if b, err := os.ReadFile(hashFile); err == nil {
+		if string(b) == curHash {
+			return "", nil
+		}
+	}
+
 	tmp := filepath.Join(os.TempDir(), filepath.Base(dbPath)+"."+time.Now().Format("20060102-150405")+".bak")
 	in, err := os.Open(dbPath)
 	if err != nil {
@@ -105,6 +127,7 @@ func UploadDBBackupToDrive(_ []byte, dbPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	_ = os.WriteFile(hashFile, []byte(curHash), 0644)
 	return uploaded.Id, nil
 }
 
