@@ -353,6 +353,8 @@ func SetupRoutes() *http.ServeMux {
 
 	mux.HandleFunc("/api/health", handlers.HealthCheck)
 
+	mux.HandleFunc("/oauth2callback", handlers.HandleOAuth2Callback)
+
 	mux.HandleFunc("/api/auth/send-otp", handlers.SendOTP)
 	mux.HandleFunc("/api/auth/verify-otp", handlers.VerifyOTP)
 	mux.HandleFunc("/api/auth/logout", handlers.Logout)
@@ -436,7 +438,6 @@ func SetupRoutes() *http.ServeMux {
 	mux.Handle("/api/admin/send-invite", middleware.AuthRequired(adminSendInviteHandler))
 	adminImportEventsHandler := http.HandlerFunc(handlers.ImportEvents)
 	mux.Handle("/api/admin/import_events", middleware.AuthRequired(adminImportEventsHandler))
-
 
 	mux.HandleFunc("/admin", func(w http.ResponseWriter, r *http.Request) {
 		data := getTemplateData(r)

@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"exunreg25/db"
@@ -17,15 +19,25 @@ import (
 
 var (
 	sheetsResetCh chan struct{}
+	sheetsOpMu    sync.Mutex
 )
 
 func startSheetsSync(database *db.Database) {
 	if sheetsResetCh == nil {
 		sheetsResetCh = make(chan struct{}, 1)
 	}
-	interval := 1 * time.Minute
+	interval := 10 * time.Minute
 	timer := time.NewTimer(interval)
 	defer timer.Stop()
+
+	backupInterval := 720 * time.Minute
+	if v := os.Getenv("DRIVE_BACKUP_INTERVAL"); v != "" {
+		if m, err := strconv.Atoi(v); err == nil && m > 0 {
+			backupInterval = time.Duration(m) * time.Minute
+		}
+	}
+	backupTicker := time.NewTicker(backupInterval)
+	defer backupTicker.Stop()
 
 	if err := syncAllTablesToSheets(database); err != nil {
 		log.Printf("sheets sync initial run error: %v", err)
@@ -34,9 +46,33 @@ func startSheetsSync(database *db.Database) {
 	for {
 		select {
 		case <-timer.C:
+			sheetsOpMu.Lock()
+			saJSON := os.Getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
+			if saJSON != "" {
+				if _, err := os.Stat(saJSON); err == nil {
+					b, err := os.ReadFile(saJSON)
+					if err == nil {
+						dbPath := os.Getenv("DB_PATH")
+						if dbPath == "" {
+							dbPath = "./data/exunreg25.db"
+						}
+						log.Printf("starting Drive backup for %s", dbPath)
+						id, err := UploadDBBackupToDrive(b, dbPath)
+						if err != nil {
+							log.Printf("drive backup error: %v", err)
+						} else {
+							log.Printf("drive backup uploaded id: %s", id)
+						}
+					}
+				}
+			}
+			log.Printf("starting sheets sync")
 			if err := syncAllTablesToSheets(database); err != nil {
 				log.Printf("sheets sync error: %v", err)
+			} else {
+				log.Printf("sheets sync completed")
 			}
+			sheetsOpMu.Unlock()
 			timer.Reset(interval)
 		case <-sheetsResetCh:
 			if !timer.Stop() {
@@ -45,10 +81,37 @@ func startSheetsSync(database *db.Database) {
 				default:
 				}
 			}
+			sheetsOpMu.Lock()
+			log.Printf("starting sheets sync (manual trigger)")
 			if err := syncAllTablesToSheets(database); err != nil {
 				log.Printf("sheets sync error: %v", err)
+			} else {
+				log.Printf("sheets sync completed (manual trigger)")
 			}
+			sheetsOpMu.Unlock()
 			timer.Reset(interval)
+		case <-backupTicker.C:
+			sheetsOpMu.Lock()
+			saJSON := os.Getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
+			if saJSON != "" {
+				if _, err := os.Stat(saJSON); err == nil {
+					b, err := os.ReadFile(saJSON)
+					if err == nil {
+						dbPath := os.Getenv("DB_PATH")
+						if dbPath == "" {
+							dbPath = "./data/exunreg25.db"
+						}
+						log.Printf("scheduled Drive backup for %s", dbPath)
+						id, err := UploadDBBackupToDrive(b, dbPath)
+						if err != nil {
+							log.Printf("drive backup error: %v", err)
+						} else {
+							log.Printf("drive backup uploaded id: %s", id)
+						}
+					}
+				}
+			}
+			sheetsOpMu.Unlock()
 		}
 	}
 }
