@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,6 +17,27 @@ import (
 	"google.golang.org/api/option"
 	sheets "google.golang.org/api/sheets/v4"
 )
+
+func parseFlexibleTime(s string) (time.Time, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return time.Time{}, nil
+	}
+	layouts := []string{
+		"2006-01-02 15:04:05",
+		time.RFC3339,
+		"2006-01-02 15:04:05 -0700 MST",
+	}
+	for _, l := range layouts {
+		if t, err := time.ParseInLocation(l, s, time.UTC); err == nil {
+			return t, nil
+		}
+	}
+	if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
+		return t, nil
+	}
+	return time.Time{}, fmt.Errorf("unrecognized time format: %s", s)
+}
 
 var (
 	sheetsResetCh chan struct{}
@@ -161,23 +183,130 @@ func syncAllTablesToSheets(database *db.Database) error {
 		pk, ok := primaryKeys[t]
 		if ok {
 			pkIndex := -1
+			idIndex := -1
 			for i, h := range hdr {
 				if strings.EqualFold(h, pk) {
 					pkIndex = i
-					break
+				}
+				if strings.EqualFold(h, "id") {
+					idIndex = i
 				}
 			}
 			sheetPKs := make(map[string]bool)
-			for _, r := range sheetRows {
-				if pkIndex >= 0 && pkIndex < len(r) {
-					v := strings.TrimSpace(r[pkIndex])
-					if v != "" {
-						sheetPKs[v] = true
+			if pkIndex >= 0 || idIndex >= 0 {
+				seenPK := map[string]int{}
+				seenID := map[string]int{}
+				toDeleteSet := map[int]bool{}
+				dbDeleteIDs := []string{}
+				for i, r := range sheetRows {
+					var pkVal string
+					if pkIndex >= 0 && pkIndex < len(r) {
+						pkVal = strings.TrimSpace(r[pkIndex])
+						if pkVal == "''" {
+							pkVal = ""
+						}
+					}
+					var idVal string
+					if idIndex >= 0 && idIndex < len(r) {
+						idVal = strings.TrimSpace(r[idIndex])
+						if idVal == "''" {
+							idVal = ""
+						}
+					}
+					if pkVal != "" {
+						if first, ok := seenPK[pkVal]; ok {
+							toDeleteSet[i] = true
+							_ = first
+							continue
+						}
+						seenPK[pkVal] = i
+					}
+					if idVal != "" {
+						if first, ok := seenID[idVal]; ok {
+							toDeleteSet[i] = true
+							_ = first
+							continue
+						}
+						seenID[idVal] = i
+					}
+					if idVal != "" && pkVal == "" {
+						allEmpty := true
+						for j, cell := range r {
+							if j == idIndex {
+								continue
+							}
+							c := strings.TrimSpace(cell)
+							if c == "''" {
+								c = ""
+							}
+							if c != "" {
+								allEmpty = false
+								break
+							}
+						}
+						if allEmpty {
+							toDeleteSet[i] = true
+							dbDeleteIDs = append(dbDeleteIDs, idVal)
+						}
+					}
+				}
+				if len(toDeleteSet) > 0 {
+					idxs := make([]int, 0, len(toDeleteSet))
+					for k := range toDeleteSet {
+						idxs = append(idxs, k)
+					}
+					sort.Slice(idxs, func(a, b int) bool { return idxs[a] > idxs[b] })
+					requests := []*sheets.Request{}
+					for _, sr := range idxs {
+						startIndex := int64(sr + 1)
+						endIndex := startIndex + 1
+						deleteReq := &sheets.DeleteDimensionRequest{
+							Range: &sheets.DimensionRange{
+								SheetId:    sheetId,
+								Dimension:  "ROWS",
+								StartIndex: startIndex,
+								EndIndex:   endIndex,
+							},
+						}
+						requests = append(requests, &sheets.Request{DeleteDimension: deleteReq})
+					}
+					if len(requests) > 0 {
+						batch := &sheets.BatchUpdateSpreadsheetRequest{Requests: requests}
+						_, _ = srv.Spreadsheets.BatchUpdate(spreadsheetID, batch).Context(ctx).Do()
+					}
+					if len(dbDeleteIDs) > 0 {
+						for _, did := range dbDeleteIDs {
+							dq := fmt.Sprintf("DELETE FROM %s WHERE id = ?", t)
+							_, _ = database.Exec(dq, did)
+						}
+					}
+					newRows := make([][]string, 0, len(sheetRows)-len(toDeleteSet))
+					for i, r := range sheetRows {
+						if _, del := toDeleteSet[i]; del {
+							continue
+						}
+						newRows = append(newRows, r)
+					}
+					sheetRows = newRows
+				}
+				for _, r := range sheetRows {
+					if pkIndex >= 0 && pkIndex < len(r) {
+						v := strings.TrimSpace(r[pkIndex])
+						if v == "''" {
+							v = ""
+						}
+						if v != "" {
+							sheetPKs[v] = true
+						}
 					}
 				}
 			}
-			if err := deleteDBRowsNotInSheet(database, t, pk, sheetPKs); err != nil {
-				log.Printf("failed to delete missing rows for table %s: %v", t, err)
+			if len(sheetPKs) > 0 {
+				if err := deleteDBRowsNotInSheet(database, t, pk, sheetPKs); err != nil {
+					log.Printf("failed to delete missing rows for table %s: %v", t, err)
+				}
+			} else {
+				log.Printf("sheet %s has no primary-key values; skipping delete to avoid wiping DB", sheetName)
 			}
 			if err := applyTableUpserts(database, t, pk, hdr, sheetRows); err != nil {
 				log.Printf("failed to apply upserts for table %s: %v", t, err)
@@ -367,6 +496,13 @@ func applyTableUpserts(database *db.Database, table, pk string, headers []string
 	if len(headers) == 0 {
 		return fmt.Errorf("no headers")
 	}
+	updatedAtIndex := -1
+	for i, h := range headers {
+		if strings.EqualFold(h, "updated_at") {
+			updatedAtIndex = i
+			break
+		}
+	}
 	tx, err := database.Begin()
 	if err != nil {
 		return err
@@ -382,11 +518,74 @@ func applyTableUpserts(database *db.Database, table, pk string, headers []string
 	for _, r := range rows {
 		values := map[string]string{}
 		for i, h := range headers {
-			values[h] = r[i]
+			v := r[i]
+			if strings.TrimSpace(v) == "''" {
+				v = ""
+			}
+			values[h] = v
 		}
 		keyVal := values[pk]
 		if keyVal == "" {
 			continue
+		}
+		skipDueToTimestamp := false
+		if updatedAtIndex != -1 {
+			q := fmt.Sprintf("SELECT updated_at FROM %s WHERE %s = ?", table, pk)
+			var dbUpdated sql.NullString
+			err := database.QueryRow(q, keyVal).Scan(&dbUpdated)
+			if err == nil {
+				sheetUpdatedStr := strings.TrimSpace(values[headers[updatedAtIndex]])
+				if sheetUpdatedStr == "''" {
+					sheetUpdatedStr = ""
+				}
+				sheetUpdated, _ := parseFlexibleTime(sheetUpdatedStr)
+				dbUpdatedTime, _ := parseFlexibleTime(dbUpdated.String)
+				if sheetUpdated.IsZero() || !sheetUpdated.After(dbUpdatedTime) {
+					skipDueToTimestamp = true
+				}
+			}
+		}
+		if skipDueToTimestamp {
+			qCols := make([]string, len(headers))
+			copy(qCols, headers)
+			q := fmt.Sprintf("SELECT %s FROM %s WHERE %s = ?", strings.Join(qCols, ", "), table, pk)
+			row := database.QueryRow(q, keyVal)
+			dbVals := make([]sql.NullString, len(headers))
+			ptrs := make([]interface{}, len(headers))
+			for i := range dbVals {
+				ptrs[i] = &dbVals[i]
+			}
+			err := row.Scan(ptrs...)
+			allowBecauseDiff := false
+			if err == nil {
+				for i, h := range headers {
+					if strings.EqualFold(h, pk) {
+						continue
+					}
+					sheetVal := strings.TrimSpace(values[h])
+					if sheetVal == "''" {
+						sheetVal = ""
+					}
+					if sheetVal == "" {
+						continue
+					}
+					dbVal := ""
+					if dbVals[i].Valid {
+						dbVal = dbVals[i].String
+					}
+					if sheetVal != dbVal {
+						allowBecauseDiff = true
+						break
+					}
+				}
+			} else {
+				allowBecauseDiff = true
+			}
+			if !allowBecauseDiff {
+				log.Printf("skipping upsert for table %s key %s because sheet is not newer than DB", table, keyVal)
+				continue
+			}
+			log.Printf("applying upsert for table %s key %s because sheet has differing values", table, keyVal)
 		}
 		cols := []string{}
 		placeholders := []string{}
@@ -396,7 +595,8 @@ func applyTableUpserts(database *db.Database, table, pk string, headers []string
 			cols = append(cols, h)
 			placeholders = append(placeholders, "?")
 			v := values[h]
-			if v == "" {
+			vtrim := strings.TrimSpace(v)
+			if vtrim == "" {
 				args = append(args, nil)
 			} else {
 				args = append(args, v)
@@ -501,7 +701,11 @@ func updateOnlyMissingCells(ctx context.Context, srv *sheets.Service, spreadshee
 	}
 	for i, r := range sheetRows {
 		if pkIndex < len(r) {
-			sheetMap[r[pkIndex]] = i
+			v := strings.TrimSpace(r[pkIndex])
+			if v == "''" {
+				v = ""
+			}
+			sheetMap[v] = i
 		}
 	}
 
@@ -525,7 +729,7 @@ func updateOnlyMissingCells(ctx context.Context, srv *sheets.Service, spreadshee
 				}
 				writeVal := dbVal
 				if dbVal == "" {
-					writeVal = "''"
+					writeVal = ""
 				}
 				if sheetVal == "" {
 					col := a1ColumnName(ci)
@@ -541,12 +745,12 @@ func updateOnlyMissingCells(ctx context.Context, srv *sheets.Service, spreadshee
 				if ci < len(dbRow) {
 					dv := fmt.Sprintf("%v", dbRow[ci])
 					if dv == "" {
-						newRow[ci] = "''"
+						newRow[ci] = ""
 					} else {
 						newRow[ci] = dv
 					}
 				} else {
-					newRow[ci] = "''"
+					newRow[ci] = ""
 				}
 			}
 			appendRows = append(appendRows, newRow)

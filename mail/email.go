@@ -60,7 +60,7 @@ func (es *EmailService) renderOTPTemplate(otp string, schoolCode string) (string
 		return "", fmt.Errorf("failed to parse template: %v", err)
 	}
 
-	td := `<td align="center" valign="middle" style="width:64px; height:64px; background-color:#2977f5; color:#ffffff; border-radius:12px; font-size:2rem; font-weight:800; line-height:64px; text-align:center; vertical-align:middle; padding:0;">%s</td>`
+	td := `<td align="center" valign="middle" style="width:48px; height:48px; background-color:#2977f5; color:#ffffff; border-radius:12px; font-size:1.5rem; font-weight:700; line-height:48px; text-align:center; vertical-align:middle; padding:0;">%s</td>`
 	var cells strings.Builder
 	for _, d := range strings.Split(otp, "") {
 		cells.WriteString(fmt.Sprintf(td, template.HTMLEscapeString(d)))

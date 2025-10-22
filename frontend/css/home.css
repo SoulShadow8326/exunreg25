@@ -72,7 +72,7 @@
 }
 
 .hero__image img {
-    width: 300px;
+    width: 500px !important;
     height: auto;
 }
 
