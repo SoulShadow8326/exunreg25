@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -148,6 +149,90 @@ func syncAllTablesToSheets(database *db.Database) error {
 		return fmt.Errorf("failed to list tables: %v", err)
 	}
 
+	eventsCap := map[string]int{}
+	evRows, err := queryTableRows(database, "events")
+	if err == nil {
+		for _, er := range evRows[1:] {
+			id := fmt.Sprintf("%v", er[0])
+			capStr := fmt.Sprintf("%v", er[6])
+			if capStr == "" {
+				continue
+			}
+			if v, err := strconv.Atoi(capStr); err == nil {
+				eventsCap[id] = v
+			}
+		}
+	}
+
+	usersRows, err := queryTableRows(database, "users")
+	if err == nil {
+		maxParts := 0
+		type regRow struct {
+			username string
+			eventID  string
+			parts    []db.Participant
+		}
+		parsed := []regRow{}
+		for _, ur := range usersRows[1:] {
+			username := fmt.Sprintf("%v", ur[1])
+			regsRaw := fmt.Sprintf("%v", ur[12])
+			if regsRaw == "" || regsRaw == "{}" {
+				continue
+			}
+			var regs map[string][]db.Participant
+			if err := json.Unmarshal([]byte(regsRaw), &regs); err != nil {
+				continue
+			}
+			for evID, parts := range regs {
+				cap := eventsCap[evID]
+				if cap == 0 {
+					cap = len(parts)
+				}
+				if len(parts) > maxParts {
+					if len(parts) > cap {
+						maxParts = cap
+					} else {
+						maxParts = len(parts)
+					}
+				}
+				parsed = append(parsed, regRow{username: username, eventID: evID, parts: parts})
+			}
+		}
+		if len(parsed) > 0 {
+			hdr := []interface{}{"username", "event_id"}
+			for i := 1; i <= maxParts; i++ {
+				hdr = append(hdr, fmt.Sprintf("p%d_name", i))
+				hdr = append(hdr, fmt.Sprintf("p%d_email", i))
+				hdr = append(hdr, fmt.Sprintf("p%d_class", i))
+				hdr = append(hdr, fmt.Sprintf("p%d_phone", i))
+			}
+			vals := [][]interface{}{hdr}
+			for _, pr := range parsed {
+				row := make([]interface{}, 2+maxParts*4)
+				row[0] = pr.username
+				row[1] = pr.eventID
+				for i := 0; i < maxParts; i++ {
+					base := 2 + i*4
+					if i < len(pr.parts) {
+						row[base] = pr.parts[i].Name
+						row[base+1] = pr.parts[i].Email
+						row[base+2] = pr.parts[i].Class
+						row[base+3] = pr.parts[i].Phone
+					} else {
+						row[base] = ""
+						row[base+1] = ""
+						row[base+2] = ""
+						row[base+3] = ""
+					}
+				}
+				vals = append(vals, row)
+			}
+			rangeA1 := "usr_reg!A1"
+			vr := &sheets.ValueRange{Values: vals}
+			_, _ = srv.Spreadsheets.Values.Update(os.Getenv("SPREADSHEET_ID"), rangeA1, vr).ValueInputOption("RAW").Do()
+		}
+	}
+
 	primaryKeys := map[string]string{
 		"users":                    "email",
 		"events":                   "id",
@@ -184,12 +269,89 @@ func syncAllTablesToSheets(database *db.Database) error {
 		if ok {
 			pkIndex := -1
 			idIndex := -1
+			sheetUpdatedIndex := -1
 			for i, h := range hdr {
 				if strings.EqualFold(h, pk) {
 					pkIndex = i
 				}
 				if strings.EqualFold(h, "id") {
 					idIndex = i
+				}
+				if strings.EqualFold(h, "updated_at") {
+					sheetUpdatedIndex = i
+				}
+			}
+			if len(rows) > 0 {
+				dbHeader := rows[0]
+				dbIndex := map[string]int{}
+				for i, c := range dbHeader {
+					dbIndex[fmt.Sprintf("%v", c)] = i
+				}
+				dbUpdatedIdx := -1
+				if v, ok := dbIndex["updated_at"]; ok {
+					dbUpdatedIdx = v
+				}
+				dbPkIdx := -1
+				if v, ok := dbIndex[pk]; ok {
+					dbPkIdx = v
+				}
+				for sr, r := range sheetRows {
+					var pkVal string
+					if pkIndex >= 0 && pkIndex < len(r) {
+						pkVal = strings.TrimSpace(r[pkIndex])
+						if pkVal == "''" {
+							pkVal = ""
+						}
+					}
+					if pkVal == "" {
+						continue
+					}
+					var sheetUpdated time.Time
+					if sheetUpdatedIndex >= 0 && sheetUpdatedIndex < len(r) {
+						s := strings.TrimSpace(r[sheetUpdatedIndex])
+						if s == "''" {
+							s = ""
+						}
+						t, _ := parseFlexibleTime(s)
+						sheetUpdated = t
+					}
+					var matchedDBRow []interface{}
+					for _, dbRow := range rows[1:] {
+						if dbPkIdx >= 0 && dbPkIdx < len(dbRow) {
+							v := fmt.Sprintf("%v", dbRow[dbPkIdx])
+							if v == pkVal {
+								matchedDBRow = dbRow
+								break
+							}
+						}
+					}
+					if matchedDBRow == nil {
+						continue
+					}
+					var dbUpdated time.Time
+					if dbUpdatedIdx >= 0 && dbUpdatedIdx < len(matchedDBRow) {
+						t, _ := parseFlexibleTime(fmt.Sprintf("%v", matchedDBRow[dbUpdatedIdx]))
+						dbUpdated = t
+					}
+					if dbUpdated.IsZero() {
+						continue
+					}
+					if dbUpdated.After(sheetUpdated) {
+						colsCount := len(hdr)
+						rowVals := make([][]interface{}, 1)
+						rowVals[0] = make([]interface{}, colsCount)
+						for ci := 0; ci < colsCount; ci++ {
+							h := hdr[ci]
+							if di, ok := dbIndex[h]; ok && di >= 0 && di < len(matchedDBRow) {
+								rowVals[0][ci] = fmt.Sprintf("%v", matchedDBRow[di])
+							} else {
+								rowVals[0][ci] = ""
+							}
+						}
+						rng := fmt.Sprintf("%s!A%d:%s%d", sheetName, sr+2, a1ColumnName(colsCount-1), sr+2)
+						vr := &sheets.ValueRange{Range: rng, Values: rowVals}
+						_, _ = srv.Spreadsheets.Values.Update(spreadsheetID, rng, vr).ValueInputOption("RAW").Context(ctx).Do()
+					}
 				}
 			}
 			sheetPKs := make(map[string]bool)

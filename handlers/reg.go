@@ -118,6 +118,7 @@ func SubmitRegistrations(w http.ResponseWriter, r *http.Request) {
 		if user.Registrations != nil {
 			delete(user.Registrations, reqEventID)
 		}
+		user.UpdatedAt = time.Now()
 		if err := globalDB.Update("users", email, user); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(false)
@@ -213,6 +214,7 @@ func SubmitRegistrations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user.Registrations[reqEventID] = participants
+	user.UpdatedAt = time.Now()
 
 	if err := globalDB.Update("users", email, user); err != nil {
 		w.Header().Set("Content-Type", "application/json")
