@@ -20,7 +20,7 @@
         "CubXL Pyraminx":"pyraminx.svg",
         "CubXL Surprise":"cubxl_surp.svg",
         "Roboknights: Robosoccer":"robotics.svg",
-        "Roboknights: Mx+C V5.0 Line Following Robot":"robotics.svg",
+        "Roboknights: Line Following Robot":"robotics.svg",
         "Surprise":"open_quiz.svg"
     },
     "default": {
@@ -117,7 +117,7 @@
             "long":"In this event, wireless robots race around a scaled-down football arena, striving to score more goals than the opponents.\n\nRobot Specifications:\nNo. of robots allowed - 2 per team (wireless only, wired robots not allowed)\nSize - 30 cm x 30 cm x 30 cm with 5% tolerance\nWeight - 5 kg with 5% tolerance\n\nPower Source - Batteries must be sealed, immobilized electrolyte type (gel cell, lithium, NiCad, or dry cells), at any point it should not cross 12 V.\n\nGameplay - The game comprises 2 halves with each half being 3 minutes long with 1 minute of half time. No ball trapping is allowed. Teams score by getting the ball in the opponent's goal. Intentional damage will lead to disqualification.\n\nReady-made robots and kits are not allowed to compete in the competition.",
             "short":"A thrilling offline competition where wireless robots compete in a football match. Teams of three build two robots to score goals in 3-minute halves, adhering to size and power regulations."
         },
-        "Roboknights: Mx+C V5.0 Line Following Robot": {
+        "Roboknights: Line Following Robot": {
             "long":"Teams will build their own autonomous robots to achieve maximum speed on a specified track. The robot must start behind the starting line and is considered to finish when any part crosses the line after a full lap, while following the black line.\n\nRobot Specifications:\nSize - 25 cm x 25 cm x 20 cm with 5% tolerance\nWeight - 2 kg with 5% tolerance\n\nPower Source - Batteries must be sealed, immobilized electrolyte type (gel cell, lithium, NiCad, or dry cells), at any point it should not cross 12 V.\n\nThe Robot must follow a black line of 25 mm width on a white surface. It should also be able to handle acute angled turns, switchbacks, hairpins, line gaps and intersections.\n\nThe robot must be autonomous. No wireless communication between bot and operator will be allowed. Bluetooth, RF Module, etc are not allowed on both.\n\nReady-made robots and kits are not allowed to compete in the competition",
             "short":"Teams build autonomous robots for a high-speed line-following race on a specified track. Robots must handle acute turns and intersections while following a black line, with strict size and weight constraints."
         },
@@ -147,7 +147,7 @@
         "CubXL Pyraminx": 1,
         "CubXL Surprise": 1,
         "Roboknights: Robosoccer": 3,
-        "Roboknights: Mx+C V5.0 Line Following Robot": 3,
+        "Roboknights: Line Following Robot": 3,
         "Surprise":2
     },
     "mode":
@@ -172,7 +172,7 @@
         "CubXL Pyraminx": "Hybrid",
         "CubXL Surprise": "Offline",
         "Roboknights: Robosoccer": "Offline",
-        "Roboknights: Mx+C V5.0 Line Following Robot": "Offline",
+        "Roboknights: Line Following Robot": "Offline",
         "Surprise": "Hybrid"
     },
     "points": {
@@ -196,7 +196,7 @@
         "CubXL Pyraminx": 10,
         "CubXL Surprise": 10,
         "Roboknights: Robosoccer": 30,
-        "Roboknights: Mx+C V5.0 Line Following Robot": 20,
+        "Roboknights: Line Following Robot": 20,
         "Surprise": 20
     },
     "individual" : {
@@ -220,7 +220,7 @@
         "CubXL Pyraminx": false,
         "CubXL Surprise": false,
         "Roboknights: Robosoccer": false,
-        "Roboknights: Mx+C V5.0 Line Following Robot": false,
+        "Roboknights: Line Following Robot": false,
         "Surprise": false
     },
     "eligibility" : {
@@ -244,7 +244,7 @@
         "CubXL Pyraminx": [6, 12],
         "CubXL Surprise": [6, 12],
         "Roboknights: Robosoccer": [9, 12],
-        "Roboknights: Mx+C V5.0 Line Following Robot": [9, 12],
+        "Roboknights: Line Following Robot": [9, 12],
         "Surprise": [9,12]
     },
     "open_to_all" : {
@@ -268,7 +268,7 @@
         "CubXL Pyraminx": false,
         "CubXL Surprise": false,
         "Roboknights: Robosoccer": false,
-        "Roboknights: Mx+C V5.0 Line Following Robot": false,
+        "Roboknights: Line Following Robot": false,
         "Surprise": false
     }
 }
