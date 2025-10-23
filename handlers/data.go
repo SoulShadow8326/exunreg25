@@ -212,70 +212,108 @@ func syncAllTablesToSheets(database *db.Database) error {
 
 	usersRows, err := queryTableRows(database, "users")
 	if err == nil {
-		maxParts := 0
-		type regRow struct {
-			username string
-			eventID  string
-			parts    []db.Participant
-		}
-		parsed := []regRow{}
-		for _, ur := range usersRows[1:] {
-			username := fmt.Sprintf("%v", ur[1])
-			regsRaw := fmt.Sprintf("%v", ur[12])
-			if regsRaw == "" || regsRaw == "{}" {
-				continue
+		if len(usersRows) > 0 {
+			userHeader := usersRows[0]
+			userIndexLower := map[string]int{}
+			for i, c := range userHeader {
+				key := strings.ToLower(fmt.Sprintf("%v", c))
+				userIndexLower[key] = i
 			}
-			var regs map[string][]db.Participant
-			if err := json.Unmarshal([]byte(regsRaw), &regs); err != nil {
-				continue
+			unameIdx := 1
+			regsIdx := 12
+			instIdx := -1
+			if v, ok := userIndexLower["username"]; ok {
+				unameIdx = v
 			}
-			for evID, parts := range regs {
-				cap := eventsCap[evID]
-				if cap == 0 {
-					cap = len(parts)
+			if v, ok := userIndexLower["registrations"]; ok {
+				regsIdx = v
+			}
+			if v, ok := userIndexLower["institution_name"]; ok {
+				instIdx = v
+			} else if v, ok := userIndexLower["institution"]; ok {
+				instIdx = v
+			}
+
+			maxParts := 0
+			type regRow struct {
+				username    string
+				institution string
+				eventID     string
+				parts       []db.Participant
+			}
+			parsed := []regRow{}
+			for _, ur := range usersRows[1:] {
+				username := ""
+				if unameIdx >= 0 && unameIdx < len(ur) {
+					username = fmt.Sprintf("%v", ur[unameIdx])
 				}
-				if len(parts) > maxParts {
-					if len(parts) > cap {
-						maxParts = cap
-					} else {
-						maxParts = len(parts)
+				institution := ""
+				if instIdx >= 0 && instIdx < len(ur) {
+					institution = fmt.Sprintf("%v", ur[instIdx])
+				}
+				regsRaw := ""
+				if regsIdx >= 0 && regsIdx < len(ur) {
+					regsRaw = fmt.Sprintf("%v", ur[regsIdx])
+				}
+				if regsRaw == "" || regsRaw == "{}" {
+					continue
+				}
+				var regs map[string][]db.Participant
+				if err := json.Unmarshal([]byte(regsRaw), &regs); err != nil {
+					continue
+				}
+				for evID, parts := range regs {
+					cap := eventsCap[evID]
+					if cap == 0 {
+						cap = len(parts)
 					}
-				}
-				parsed = append(parsed, regRow{username: username, eventID: evID, parts: parts})
-			}
-		}
-		if len(parsed) > 0 {
-			hdr := []interface{}{"username", "event_id"}
-			for i := 1; i <= maxParts; i++ {
-				hdr = append(hdr, fmt.Sprintf("p%d_name", i))
-				hdr = append(hdr, fmt.Sprintf("p%d_email", i))
-				hdr = append(hdr, fmt.Sprintf("p%d_class", i))
-				hdr = append(hdr, fmt.Sprintf("p%d_phone", i))
-			}
-			vals := [][]interface{}{hdr}
-			for _, pr := range parsed {
-				row := make([]interface{}, 2+maxParts*4)
-				row[0] = pr.username
-				row[1] = pr.eventID
-				for i := 0; i < maxParts; i++ {
-					base := 2 + i*4
-					if i < len(pr.parts) {
-						row[base] = pr.parts[i].Name
-						row[base+1] = pr.parts[i].Email
-						row[base+2] = pr.parts[i].Class
-						row[base+3] = pr.parts[i].Phone
-					} else {
-						row[base] = ""
-						row[base+1] = ""
-						row[base+2] = ""
-						row[base+3] = ""
+					if len(parts) > maxParts {
+						if len(parts) > cap {
+							maxParts = cap
+						} else {
+							maxParts = len(parts)
+						}
 					}
+					parsed = append(parsed, regRow{username: username, institution: institution, eventID: evID, parts: parts})
 				}
-				vals = append(vals, row)
 			}
-			rangeA1 := "usr_reg!A1"
-			vr := &sheets.ValueRange{Values: vals}
-			_, _ = srv.Spreadsheets.Values.Update(os.Getenv("SPREADSHEET_ID"), rangeA1, vr).ValueInputOption("RAW").Do()
+			if len(parsed) > 0 {
+				hdr := []interface{}{"username", "institution", "event_id"}
+				for i := 1; i <= maxParts; i++ {
+					hdr = append(hdr, fmt.Sprintf("p%d_name", i))
+					hdr = append(hdr, fmt.Sprintf("p%d_email", i))
+					hdr = append(hdr, fmt.Sprintf("p%d_class", i))
+					hdr = append(hdr, fmt.Sprintf("p%d_phone", i))
+				}
+				vals := [][]interface{}{hdr}
+				for _, pr := range parsed {
+					row := make([]interface{}, 3+maxParts*4)
+					row[0] = pr.username
+					row[1] = pr.institution
+					row[2] = pr.eventID
+					for i := 0; i < maxParts; i++ {
+						base := 3 + i*4
+						if i < len(pr.parts) {
+							row[base] = pr.parts[i].Name
+							row[base+1] = pr.parts[i].Email
+							row[base+2] = pr.parts[i].Class
+							row[base+3] = pr.parts[i].Phone
+						} else {
+							row[base] = ""
+							row[base+1] = ""
+							row[base+2] = ""
+							row[base+3] = ""
+						}
+					}
+					vals = append(vals, row)
+				}
+				_, _ = ensureSheetExists(ctx, srv, spreadsheetID, "usr_reg")
+				rangeA1 := "usr_reg!A1"
+				vr := &sheets.ValueRange{Values: vals}
+				if _, err := srv.Spreadsheets.Values.Update(os.Getenv("SPREADSHEET_ID"), rangeA1, vr).ValueInputOption("RAW").Context(ctx).Do(); err != nil {
+					log.Printf("failed to write usr_reg sheet: %v", err)
+				}
+			}
 		}
 	}
 
