@@ -89,7 +89,7 @@ class HomePage {
             heroImage.style.height = '320px';
             heroImage.style.width = 'auto';
         } else {
-            heroImage.style.width = '500px';
+            heroImage.style.width = '600px';
             heroImage.style.height = 'auto';
         }
     }
