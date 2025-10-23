@@ -24,19 +24,65 @@ func parseFlexibleTime(s string) (time.Time, error) {
 	if s == "" {
 		return time.Time{}, nil
 	}
-	layouts := []string{
-		"2006-01-02 15:04:05",
-		time.RFC3339,
-		"2006-01-02 15:04:05 -0700 MST",
+
+	tryParse := func(str string) (time.Time, error) {
+		layouts := []string{
+			"2006-01-02 15:04:05.999999999 -0700 MST",
+			"2006-01-02 15:04:05.999999 -0700 MST",
+			"2006-01-02 15:04:05.999 -0700 MST",
+			"2006-01-02 15:04:05 -0700 MST",
+			"2006-01-02 15:04:05.999999999 -0700",
+			"2006-01-02 15:04:05.999999 -0700",
+			"2006-01-02 15:04:05.999 -0700",
+			"2006-01-02 15:04:05 -0700",
+			"2006-01-02T15:04:05.999999999-0700",
+			"2006-01-02T15:04:05.999999-0700",
+			"2006-01-02T15:04:05-0700",
+			time.RFC3339Nano,
+			time.RFC3339,
+			"2006-01-02 15:04:05",
+		}
+		for _, l := range layouts {
+			if t, err := time.ParseInLocation(l, str, time.UTC); err == nil {
+				return t, nil
+			}
+		}
+		return time.Time{}, fmt.Errorf("unrecognized time format: %s", str)
 	}
-	for _, l := range layouts {
-		if t, err := time.ParseInLocation(l, s, time.UTC); err == nil {
+
+	if t, err := tryParse(s); err == nil {
+		return t, nil
+	}
+
+	parts := strings.Fields(s)
+	if len(parts) >= 2 {
+		last := parts[len(parts)-1]
+		secondLast := parts[len(parts)-2]
+		if last == secondLast {
+			ns := strings.Join(parts[:len(parts)-1], " ")
+			if t, err := tryParse(ns); err == nil {
+				return t, nil
+			}
+		}
+		if len(parts) >= 3 {
+			p2 := parts[len(parts)-2]
+			p1 := parts[len(parts)-3]
+			if (strings.HasPrefix(p2, "+") || strings.HasPrefix(p2, "-")) && p1 == p2 {
+				ns := strings.Join(parts[:len(parts)-2], " ") + " " + p2
+				if t, err := tryParse(ns); err == nil {
+					return t, nil
+				}
+			}
+		}
+	}
+
+	if idx := strings.Index(s, " "); idx != -1 {
+		s2 := s[:idx] + "T" + s[idx+1:]
+		if t, err := tryParse(s2); err == nil {
 			return t, nil
 		}
 	}
-	if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
-		return t, nil
-	}
+
 	return time.Time{}, fmt.Errorf("unrecognized time format: %s", s)
 }
 
@@ -314,6 +360,7 @@ func syncAllTablesToSheets(database *db.Database) error {
 						}
 						t, _ := parseFlexibleTime(s)
 						sheetUpdated = t
+						log.Printf("sheet->db: table=%s pk=%s rawSheetUpdated=%q parsedSheetUpdated=%v", t, pkVal, s, sheetUpdated)
 					}
 					var matchedDBRow []interface{}
 					for _, dbRow := range rows[1:] {
@@ -330,27 +377,44 @@ func syncAllTablesToSheets(database *db.Database) error {
 					}
 					var dbUpdated time.Time
 					if dbUpdatedIdx >= 0 && dbUpdatedIdx < len(matchedDBRow) {
-						t, _ := parseFlexibleTime(fmt.Sprintf("%v", matchedDBRow[dbUpdatedIdx]))
+						rawDB := fmt.Sprintf("%v", matchedDBRow[dbUpdatedIdx])
+						t, _ := parseFlexibleTime(rawDB)
 						dbUpdated = t
+						log.Printf("sheet->db: table=%s pk=%s rawDBUpdated=%q parsedDBUpdated=%v", t, pkVal, rawDB, dbUpdated)
 					}
 					if dbUpdated.IsZero() {
+						log.Printf("sheet->db: table=%s pk=%s dbUpdated is zero, skipping comparison", t, pkVal)
 						continue
 					}
 					if dbUpdated.After(sheetUpdated) {
 						colsCount := len(hdr)
-						rowVals := make([][]interface{}, 1)
-						rowVals[0] = make([]interface{}, colsCount)
+						rowNum := sr + 2
 						for ci := 0; ci < colsCount; ci++ {
 							h := hdr[ci]
+							var dbVal string
 							if di, ok := dbIndex[h]; ok && di >= 0 && di < len(matchedDBRow) {
-								rowVals[0][ci] = fmt.Sprintf("%v", matchedDBRow[di])
+								dbVal = fmt.Sprintf("%v", matchedDBRow[di])
 							} else {
-								rowVals[0][ci] = ""
+								dbVal = ""
+							}
+							var sheetVal string
+							if ci < len(r) {
+								sheetVal = r[ci]
+							} else {
+								sheetVal = ""
+							}
+							if dbVal != sheetVal {
+								col := a1ColumnName(ci)
+								rng := fmt.Sprintf("%s!%s%d", sheetName, col, rowNum)
+								vr := &sheets.ValueRange{Range: rng, Values: [][]interface{}{{dbVal}}}
+								res, err := srv.Spreadsheets.Values.Update(spreadsheetID, rng, vr).ValueInputOption("RAW").Context(ctx).Do()
+								if err != nil {
+									log.Printf("failed to update sheet %s for pk=%s (cell=%s%d): %v", sheetName, pkVal, col, rowNum, err)
+								} else {
+									log.Printf("updated sheet %s for pk=%s (cell=%s%d): updatedCells=%d", sheetName, pkVal, col, rowNum, res.UpdatedCells)
+								}
 							}
 						}
-						rng := fmt.Sprintf("%s!A%d:%s%d", sheetName, sr+2, a1ColumnName(colsCount-1), sr+2)
-						vr := &sheets.ValueRange{Range: rng, Values: rowVals}
-						_, _ = srv.Spreadsheets.Values.Update(spreadsheetID, rng, vr).ValueInputOption("RAW").Context(ctx).Do()
 					}
 				}
 			}
@@ -470,13 +534,114 @@ func syncAllTablesToSheets(database *db.Database) error {
 			} else {
 				log.Printf("sheet %s has no primary-key values; skipping delete to avoid wiping DB", sheetName)
 			}
-			if err := applyTableUpserts(database, t, pk, hdr, sheetRows); err != nil {
+			skippedPKs := []string{}
+			if err := applyTableUpserts(database, t, pk, hdr, sheetRows, &skippedPKs); err != nil {
 				log.Printf("failed to apply upserts for table %s: %v", t, err)
 			}
 			rows, err = queryTableRows(database, t)
 			if err != nil {
 				log.Printf("failed to re-query table %s: %v", t, err)
 				continue
+			}
+			if len(rows) > 0 {
+				dbHeader := rows[0]
+				dbIndex := map[string]int{}
+				for i, c := range dbHeader {
+					dbIndex[fmt.Sprintf("%v", c)] = i
+				}
+				dbUpdatedIdx := -1
+				if v, ok := dbIndex["updated_at"]; ok {
+					dbUpdatedIdx = v
+				}
+				dbPkIdx := -1
+				if v, ok := dbIndex[pk]; ok {
+					dbPkIdx = v
+				}
+				colsCount := len(hdr)
+				sheetMap := map[string]int{}
+				for i, r := range sheetRows {
+					if pkIndex < len(r) {
+						sheetMap[strings.TrimSpace(r[pkIndex])] = i
+					}
+				}
+				skippedSet := map[string]bool{}
+				for _, s := range skippedPKs {
+					skippedSet[s] = true
+				}
+				for _, dbRow := range rows[1:] {
+					if dbPkIdx < 0 || dbPkIdx >= len(dbRow) {
+						continue
+					}
+					pkVal := fmt.Sprintf("%v", dbRow[dbPkIdx])
+					if pkVal == "" {
+						continue
+					}
+					dbUpdated := time.Time{}
+					rawDBUpdated := ""
+					if dbUpdatedIdx >= 0 && dbUpdatedIdx < len(dbRow) {
+						rawDBUpdated = fmt.Sprintf("%v", dbRow[dbUpdatedIdx])
+						dbUpdated, _ = parseFlexibleTime(rawDBUpdated)
+					}
+					sr, exists := sheetMap[pkVal]
+					var sheetUpdated time.Time
+					if exists {
+						if sheetUpdatedIndex >= 0 && sheetUpdatedIndex < len(sheetRows[sr]) {
+							s := strings.TrimSpace(sheetRows[sr][sheetUpdatedIndex])
+							if s == "''" {
+								s = ""
+							}
+							sheetUpdated, _ = parseFlexibleTime(s)
+						}
+					}
+					if dbUpdated.IsZero() {
+						log.Printf("db->sheet: table=%s pk=%s rawDBUpdated=%q parsedZero, skipping", t, pkVal, rawDBUpdated)
+						continue
+					}
+					if !exists {
+						newRow := make([]interface{}, colsCount)
+						for ci := 0; ci < colsCount; ci++ {
+							h := hdr[ci]
+							if di, ok := dbIndex[h]; ok && di >= 0 && di < len(dbRow) {
+								newRow[ci] = fmt.Sprintf("%v", dbRow[di])
+							} else {
+								newRow[ci] = ""
+							}
+						}
+						vr := &sheets.ValueRange{Values: [][]interface{}{newRow}}
+						_, _ = srv.Spreadsheets.Values.Append(spreadsheetID, sheetName+"!A1", vr).ValueInputOption("RAW").InsertDataOption("INSERT_ROWS").Context(ctx).Do()
+						continue
+					}
+					log.Printf("db->sheet: table=%s pk=%s dbUpdated=%v sheetUpdated=%v exists=%v skipped=%v", t, pkVal, dbUpdated, sheetUpdated, exists, skippedSet[pkVal])
+					if dbUpdated.After(sheetUpdated) || skippedSet[pkVal] {
+						rowNum := sr + 2
+						for ci := 0; ci < colsCount; ci++ {
+							h := hdr[ci]
+							var dbVal string
+							if di, ok := dbIndex[h]; ok && di >= 0 && di < len(dbRow) {
+								dbVal = fmt.Sprintf("%v", dbRow[di])
+							} else {
+								dbVal = ""
+							}
+							var sheetVal string
+							if ci < len(sheetRows[sr]) {
+								sheetVal = sheetRows[sr][ci]
+							} else {
+								sheetVal = ""
+							}
+							if strings.TrimSpace(dbVal) != strings.TrimSpace(sheetVal) {
+								col := a1ColumnName(ci)
+								rng := fmt.Sprintf("%s!%s%d", sheetName, col, rowNum)
+								vr := &sheets.ValueRange{Range: rng, Values: [][]interface{}{{dbVal}}}
+								res, err := srv.Spreadsheets.Values.Update(spreadsheetID, rng, vr).ValueInputOption("RAW").Context(ctx).Do()
+								if err != nil {
+									log.Printf("failed to update sheet %s for pk=%s (cell=%s%d): %v", sheetName, pkVal, col, rowNum, err)
+								} else {
+									log.Printf("updated sheet %s for pk=%s (cell=%s%d): updatedCells=%d", sheetName, pkVal, col, rowNum, res.UpdatedCells)
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 
@@ -654,9 +819,20 @@ func readSheetRows(ctx context.Context, srv *sheets.Service, spreadsheetID, shee
 	return headers, rows, nil
 }
 
-func applyTableUpserts(database *db.Database, table, pk string, headers []string, rows [][]string) error {
+func applyTableUpserts(database *db.Database, table, pk string, headers []string, rows [][]string, skipped *[]string) error {
 	if len(headers) == 0 {
 		return fmt.Errorf("no headers")
+	}
+	dbRowsAll, _ := queryTableRows(database, table)
+	dbIndex := map[string]int{}
+	dbPkIdx := -1
+	if len(dbRowsAll) > 0 {
+		for i, c := range dbRowsAll[0] {
+			dbIndex[fmt.Sprintf("%v", c)] = i
+		}
+		if v, ok := dbIndex[pk]; ok {
+			dbPkIdx = v
+		}
 	}
 	updatedAtIndex := -1
 	for i, h := range headers {
@@ -690,7 +866,6 @@ func applyTableUpserts(database *db.Database, table, pk string, headers []string
 		if keyVal == "" {
 			continue
 		}
-		skipDueToTimestamp := false
 		if updatedAtIndex != -1 {
 			q := fmt.Sprintf("SELECT updated_at FROM %s WHERE %s = ?", table, pk)
 			var dbUpdated sql.NullString
@@ -702,52 +877,46 @@ func applyTableUpserts(database *db.Database, table, pk string, headers []string
 				}
 				sheetUpdated, _ := parseFlexibleTime(sheetUpdatedStr)
 				dbUpdatedTime, _ := parseFlexibleTime(dbUpdated.String)
-				if sheetUpdated.IsZero() || !sheetUpdated.After(dbUpdatedTime) {
-					skipDueToTimestamp = true
-				}
-			}
-		}
-		if skipDueToTimestamp {
-			qCols := make([]string, len(headers))
-			copy(qCols, headers)
-			q := fmt.Sprintf("SELECT %s FROM %s WHERE %s = ?", strings.Join(qCols, ", "), table, pk)
-			row := database.QueryRow(q, keyVal)
-			dbVals := make([]sql.NullString, len(headers))
-			ptrs := make([]interface{}, len(headers))
-			for i := range dbVals {
-				ptrs[i] = &dbVals[i]
-			}
-			err := row.Scan(ptrs...)
-			allowBecauseDiff := false
-			if err == nil {
-				for i, h := range headers {
-					if strings.EqualFold(h, pk) {
+				if !sheetUpdated.After(dbUpdatedTime) {
+					allow := false
+					if len(dbRowsAll) > 1 && dbPkIdx >= 0 {
+						var matchedDBRow []interface{}
+						for _, dbr := range dbRowsAll[1:] {
+							if dbPkIdx < len(dbr) {
+								if fmt.Sprintf("%v", dbr[dbPkIdx]) == keyVal {
+									matchedDBRow = dbr
+									break
+								}
+							}
+						}
+						if matchedDBRow != nil {
+							for _, h := range headers {
+								if strings.EqualFold(h, pk) || strings.EqualFold(h, "updated_at") {
+									continue
+								}
+								var dbCell string
+								if di, ok := dbIndex[h]; ok && di >= 0 && di < len(matchedDBRow) {
+									dbCell = fmt.Sprintf("%v", matchedDBRow[di])
+								} else {
+									dbCell = ""
+								}
+								sheetCell := values[h]
+								if strings.TrimSpace(sheetCell) != "" && strings.TrimSpace(sheetCell) != strings.TrimSpace(dbCell) {
+									allow = true
+									break
+								}
+							}
+						}
+					}
+					if !allow {
+						log.Printf("apply upsert: table=%s key=%s sheetUpdated=%v dbUpdated=%v decision=skip", table, keyVal, sheetUpdated, dbUpdatedTime)
+						if skipped != nil {
+							*skipped = append(*skipped, keyVal)
+						}
 						continue
 					}
-					sheetVal := strings.TrimSpace(values[h])
-					if sheetVal == "''" {
-						sheetVal = ""
-					}
-					if sheetVal == "" {
-						continue
-					}
-					dbVal := ""
-					if dbVals[i].Valid {
-						dbVal = dbVals[i].String
-					}
-					if sheetVal != dbVal {
-						allowBecauseDiff = true
-						break
-					}
 				}
-			} else {
-				allowBecauseDiff = true
 			}
-			if !allowBecauseDiff {
-				log.Printf("skipping upsert for table %s key %s because sheet is not newer than DB", table, keyVal)
-				continue
-			}
-			log.Printf("applying upsert for table %s key %s because sheet has differing values", table, keyVal)
 		}
 		cols := []string{}
 		placeholders := []string{}
@@ -757,6 +926,10 @@ func applyTableUpserts(database *db.Database, table, pk string, headers []string
 			cols = append(cols, h)
 			placeholders = append(placeholders, "?")
 			v := values[h]
+			if strings.EqualFold(h, "updated_at") {
+				args = append(args, time.Now())
+				continue
+			}
 			vtrim := strings.TrimSpace(v)
 			if vtrim == "" {
 				args = append(args, nil)
