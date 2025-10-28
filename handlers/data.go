@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -219,9 +220,10 @@ func syncAllTablesToSheets(database *db.Database) error {
 				key := strings.ToLower(fmt.Sprintf("%v", c))
 				userIndexLower[key] = i
 			}
-			unameIdx := 1
-			regsIdx := 12
+			unameIdx := -1
+			regsIdx := -1
 			instIdx := -1
+			updatedIdx := -1
 			if v, ok := userIndexLower["username"]; ok {
 				unameIdx = v
 			}
@@ -233,15 +235,13 @@ func syncAllTablesToSheets(database *db.Database) error {
 			} else if v, ok := userIndexLower["institution"]; ok {
 				instIdx = v
 			}
-
-			maxParts := 0
-			type regRow struct {
-				username    string
-				institution string
-				eventID     string
-				parts       []db.Participant
+			if v, ok := userIndexLower["updated_at"]; ok {
+				updatedIdx = v
 			}
-			parsed := []regRow{}
+
+			upsertQ := `INSERT INTO usr_regs (username, institution, event_id, p1_name, p1_email, p1_class, p1_phone, p2_name, p2_email, p2_class, p2_phone, p3_name, p3_email, p3_class, p3_phone, p4_name, p4_email, p4_class, p4_phone, p5_name, p5_email, p5_class, p5_phone, p6_name, p6_email, p6_class, p6_phone, p7_name, p7_email, p7_class, p7_phone, p8_name, p8_email, p8_class, p8_phone, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(username, event_id) DO UPDATE SET p1_name = excluded.p1_name, p1_email = excluded.p1_email, p1_class = excluded.p1_class, p1_phone = excluded.p1_phone, p2_name = excluded.p2_name, p2_email = excluded.p2_email, p2_class = excluded.p2_class, p2_phone = excluded.p2_phone, p3_name = excluded.p3_name, p3_email = excluded.p3_email, p3_class = excluded.p3_class, p3_phone = excluded.p3_phone, p4_name = excluded.p4_name, p4_email = excluded.p4_email, p4_class = excluded.p4_class, p4_phone = excluded.p4_phone, p5_name = excluded.p5_name, p5_email = excluded.p5_email, p5_class = excluded.p5_class, p5_phone = excluded.p5_phone, p6_name = excluded.p6_name, p6_email = excluded.p6_email, p6_class = excluded.p6_class, p6_phone = excluded.p6_phone, p7_name = excluded.p7_name, p7_email = excluded.p7_email, p7_class = excluded.p7_class, p7_phone = excluded.p7_phone, p8_name = excluded.p8_name, p8_email = excluded.p8_email, p8_class = excluded.p8_class, p8_phone = excluded.p8_phone, updated_at = excluded.updated_at`
+
+			const maxParts = 8
 			for _, ur := range usersRows[1:] {
 				username := ""
 				if unameIdx >= 0 && unameIdx < len(ur) {
@@ -262,56 +262,39 @@ func syncAllTablesToSheets(database *db.Database) error {
 				if err := json.Unmarshal([]byte(regsRaw), &regs); err != nil {
 					continue
 				}
+				userUpdated := time.Now()
+				if updatedIdx >= 0 && updatedIdx < len(ur) {
+					s := fmt.Sprintf("%v", ur[updatedIdx])
+					if t, err := parseFlexibleTime(s); err == nil && !t.IsZero() {
+						userUpdated = t
+					}
+				}
+				now := time.Now()
 				for evID, parts := range regs {
-					cap := eventsCap[evID]
-					if cap == 0 {
-						cap = len(parts)
+					var existingUpdated sql.NullString
+					err := database.QueryRow("SELECT updated_at FROM usr_regs WHERE username = ? AND event_id = ?", username, evID).Scan(&existingUpdated)
+					if err != nil && err != sql.ErrNoRows {
+						continue
 					}
-					if len(parts) > maxParts {
-						if len(parts) > cap {
-							maxParts = cap
-						} else {
-							maxParts = len(parts)
+					if err == nil {
+						existingT, _ := parseFlexibleTime(fmt.Sprintf("%v", existingUpdated.String))
+						if !userUpdated.After(existingT) {
+							continue
 						}
 					}
-					parsed = append(parsed, regRow{username: username, institution: institution, eventID: evID, parts: parts})
-				}
-			}
-			if len(parsed) > 0 {
-				hdr := []interface{}{"username", "institution", "event_id"}
-				for i := 1; i <= maxParts; i++ {
-					hdr = append(hdr, fmt.Sprintf("p%d_name", i))
-					hdr = append(hdr, fmt.Sprintf("p%d_email", i))
-					hdr = append(hdr, fmt.Sprintf("p%d_class", i))
-					hdr = append(hdr, fmt.Sprintf("p%d_phone", i))
-				}
-				vals := [][]interface{}{hdr}
-				for _, pr := range parsed {
-					row := make([]interface{}, 3+maxParts*4)
-					row[0] = pr.username
-					row[1] = pr.institution
-					row[2] = pr.eventID
+					args := []interface{}{username, institution, evID}
 					for i := 0; i < maxParts; i++ {
-						base := 3 + i*4
-						if i < len(pr.parts) {
-							row[base] = pr.parts[i].Name
-							row[base+1] = pr.parts[i].Email
-							row[base+2] = pr.parts[i].Class
-							row[base+3] = pr.parts[i].Phone
+						if i < len(parts) {
+							args = append(args, parts[i].Name)
+							args = append(args, parts[i].Email)
+							args = append(args, fmt.Sprintf("%v", parts[i].Class))
+							args = append(args, parts[i].Phone)
 						} else {
-							row[base] = ""
-							row[base+1] = ""
-							row[base+2] = ""
-							row[base+3] = ""
+							args = append(args, "", "", "", "")
 						}
 					}
-					vals = append(vals, row)
-				}
-				_, _ = ensureSheetExists(ctx, srv, spreadsheetID, "usr_reg")
-				rangeA1 := "usr_reg!A1"
-				vr := &sheets.ValueRange{Values: vals}
-				if _, err := srv.Spreadsheets.Values.Update(os.Getenv("SPREADSHEET_ID"), rangeA1, vr).ValueInputOption("RAW").Context(ctx).Do(); err != nil {
-					log.Printf("failed to write usr_reg sheet: %v", err)
+					args = append(args, now, userUpdated)
+					_, _ = database.Exec(upsertQ, args...)
 				}
 			}
 		}
@@ -321,6 +304,7 @@ func syncAllTablesToSheets(database *db.Database) error {
 		"users":                    "email",
 		"events":                   "id",
 		"individual_registrations": "id",
+		"usr_regs":                 "id",
 	}
 
 	for _, t := range tables {
@@ -723,6 +707,115 @@ func syncAllTablesToSheets(database *db.Database) error {
 		}
 	}
 
+	if err := mergeUsrRegsToUsers(database); err != nil {
+		log.Printf("merge usr_regs->users error: %v", err)
+	}
+	return nil
+}
+
+func mergeUsrRegsToUsers(database *db.Database) error {
+	q := `SELECT username, event_id, p1_name, p1_email, p1_class, p1_phone, p2_name, p2_email, p2_class, p2_phone, p3_name, p3_email, p3_class, p3_phone, p4_name, p4_email, p4_class, p4_phone, p5_name, p5_email, p5_class, p5_phone, p6_name, p6_email, p6_class, p6_phone, p7_name, p7_email, p7_class, p7_phone, p8_name, p8_email, p8_class, p8_phone, updated_at FROM usr_regs`
+	rows, err := database.Query(q)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	type userRegsData struct {
+		regs    map[string][]db.Participant
+		updated time.Time
+	}
+
+	usersMap := map[string]*userRegsData{}
+
+	for rows.Next() {
+		var username, eventID string
+		var p [8]struct{ name, email, class, phone sql.NullString }
+		var updated sql.NullString
+		scanArgs := []interface{}{&username, &eventID}
+		for i := 0; i < 8; i++ {
+			scanArgs = append(scanArgs, &p[i].name, &p[i].email, &p[i].class, &p[i].phone)
+		}
+		scanArgs = append(scanArgs, &updated)
+		if err := rows.Scan(scanArgs...); err != nil {
+			continue
+		}
+		if username == "" {
+			continue
+		}
+		parts := []db.Participant{}
+		for i := 0; i < 8; i++ {
+			if (p[i].name.Valid && strings.TrimSpace(p[i].name.String) != "") || (p[i].email.Valid && strings.TrimSpace(p[i].email.String) != "") {
+				classInt := 0
+				if p[i].class.Valid {
+					if v, err := strconv.Atoi(strings.TrimSpace(p[i].class.String)); err == nil {
+						classInt = v
+					}
+				}
+				name := ""
+				if p[i].name.Valid {
+					name = p[i].name.String
+				}
+				email := ""
+				if p[i].email.Valid {
+					email = p[i].email.String
+				}
+				phone := ""
+				if p[i].phone.Valid {
+					phone = p[i].phone.String
+				}
+				parts = append(parts, db.Participant{Name: name, Email: email, Class: classInt, Phone: phone})
+			}
+		}
+		ud := time.Time{}
+		if updated.Valid {
+			if t, err := parseFlexibleTime(strings.TrimSpace(updated.String)); err == nil {
+				ud = t
+			}
+		}
+		ur := usersMap[username]
+		if ur == nil {
+			ur = &userRegsData{regs: map[string][]db.Participant{}, updated: ud}
+			usersMap[username] = ur
+		}
+		ur.regs[eventID] = parts
+		if ud.After(ur.updated) {
+			ur.updated = ud
+		}
+	}
+
+	for username, ur := range usersMap {
+		var regsStr sql.NullString
+		var userUpdated sql.NullString
+		err := database.QueryRow("SELECT registrations, updated_at FROM users WHERE username = ? LIMIT 1", username).Scan(&regsStr, &userUpdated)
+		if err != nil {
+			continue
+		}
+		var existing map[string][]db.Participant
+		if regsStr.Valid && regsStr.String != "" && regsStr.String != "{}" {
+			_ = json.Unmarshal([]byte(regsStr.String), &existing)
+		} else {
+			existing = map[string][]db.Participant{}
+		}
+		if reflect.DeepEqual(existing, ur.regs) {
+			continue
+		}
+		userUpdT := time.Time{}
+		if userUpdated.Valid {
+			if t, err := parseFlexibleTime(strings.TrimSpace(userUpdated.String)); err == nil {
+				userUpdT = t
+			}
+		}
+		if ur.updated.Before(userUpdT) {
+			continue
+		}
+		b, err := json.Marshal(ur.regs)
+		if err != nil {
+			continue
+		}
+		upd := time.Now()
+		_, _ = database.Exec("UPDATE users SET registrations = ?, updated_at = ? WHERE username = ?", string(b), upd, username)
+	}
 	return nil
 }
 
@@ -915,7 +1008,7 @@ func applyTableUpserts(database *db.Database, table, pk string, headers []string
 				}
 				sheetUpdated, _ := parseFlexibleTime(sheetUpdatedStr)
 				dbUpdatedTime, _ := parseFlexibleTime(dbUpdated.String)
-				if !sheetUpdated.After(dbUpdatedTime) {
+				if sheetUpdated.Before(dbUpdatedTime) {
 					allow := false
 					if len(dbRowsAll) > 1 && dbPkIdx >= 0 {
 						var matchedDBRow []interface{}

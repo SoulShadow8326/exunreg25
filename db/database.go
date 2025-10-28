@@ -241,6 +241,29 @@ func (db *Database) InitTables() error {
 		return fmt.Errorf("error creating logs table: %v", err)
 	}
 
+	createUsrRegsTable := `
+	CREATE TABLE IF NOT EXISTS usr_regs (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		username TEXT,
+		institution TEXT,
+		event_id TEXT,
+		p1_name TEXT, p1_email TEXT, p1_class TEXT, p1_phone TEXT,
+		p2_name TEXT, p2_email TEXT, p2_class TEXT, p2_phone TEXT,
+		p3_name TEXT, p3_email TEXT, p3_class TEXT, p3_phone TEXT,
+		p4_name TEXT, p4_email TEXT, p4_class TEXT, p4_phone TEXT,
+		p5_name TEXT, p5_email TEXT, p5_class TEXT, p5_phone TEXT,
+		p6_name TEXT, p6_email TEXT, p6_class TEXT, p6_phone TEXT,
+		p7_name TEXT, p7_email TEXT, p7_class TEXT, p7_phone TEXT,
+		p8_name TEXT, p8_email TEXT, p8_class TEXT, p8_phone TEXT,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(username, event_id)
+	);`
+
+	if _, err := db.Exec(createUsrRegsTable); err != nil {
+		return fmt.Errorf("error creating usr_regs table: %v", err)
+	}
+
 	if _, err := db.Exec(createIndexes); err != nil {
 		return fmt.Errorf("error creating indexes: %v", err)
 	}
