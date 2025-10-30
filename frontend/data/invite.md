@@ -26,7 +26,7 @@ So, who should participate in Exun 2025? If you are someone, or know someone, wh
 
 - We have also teamed up with four other clubs in our school to offer you a chance to show off your skillset: DomainSquare+, the Gaming society of our school; Roboknights, the robotics club; CubXL, the cubing club and CyberX, the Cybersecurity Club.
 
-- Please check our [**Events**](https://reg.exunclan.com/events) page for details of the full spectrum of events Exun 2025 has to offer. Most events will have preliminary rounds which will be conducted prior to the offline days. (More details can be found at [**exun.co/24/schedule**](https://docs.google.com/document/d/1h_sWUuvQlLoiwf4R7kGO7_VQi-mnqlbGrBu6wyAGEhg/edit?usp=sharing)) while other events will fully happen onsite on November 9-10, so be sure to check that out!
+- Please check our [**Events**](https://reg.exunclan.com/events) page for details of the full spectrum of events Exun 2025 has to offer. Most events will have preliminary rounds which will be conducted prior to the offline days. (More details can be found at [**exun.co/25/schedule**](https://exun.co/25/schedule)) while other events will fully happen onsite on November 9-10, so be sure to check that out!
 
 
 ## **Prizes & Overall Trophy**
@@ -45,7 +45,7 @@ Podium points from each win will contribute towards a school’s overall points 
 
 Exun Clan’s flagship event of the year, we present Sudocrypt 15.0 this year, our annual international cryptic hunt. With thousands of participants and an exciting new system of game mechanics each year, levels are rewarding and sometimes challenging. Keep a lookout for the announcement and format for this year’s hunt (to be out soon)!
 
-However, first, what is a "cryptic hunt"? To put it simply: Cryptic hunts are the online equivalent of treasure hunts and require you to hunt the internet for clues to solve questions. For more information, you can check out [**this**](https://docs.google.com/document/d/1bpeRtE2YC09lHyKIuPUFJkxxp1gfuPPvRneCMJxPv7U/edit?usp=sharing) resource.
+However, first, what is a "cryptic hunt"? To put it simply: Cryptic hunts are the online equivalent of treasure hunts and require you to hunt the internet for clues to solve questions. For more information, you can check out [**this**](https://exun.co/resources/cryptic) resource.
 
 
 ## **Dates:**
@@ -61,7 +61,7 @@ Be sure to mark your calendars for Exun 2025!
 | Onsite Events Timings             | 9AM - 4PM                          | 8AM - 3PM     |
 | Onsite Events Reporting Time      | 8:30AM                             | 7:30AM        |
 
-**\*:** For events with an online preliminary round, registrations end 12 hours before the submission deadline. See the schedule at [**exun.co/24/schedule**](https://docs.google.com/document/d/1h_sWUuvQlLoiwf4R7kGO7_VQi-mnqlbGrBu6wyAGEhg/edit?usp=sharing)
+**\*:** For events with an online preliminary round, registrations end 12 hours before the submission deadline. See the schedule at [**exun.co/25/schedule**](https://exun.co/25/schedule)
 
 
 ## **Independent vs School Participation**
@@ -117,7 +117,7 @@ You are welcome to mail us any time at <exun@dpsrkp.net>
 
 - Online registration shall remain open till 6nd November 2025, 11:59PM IST for events without preliminary rounds, and close 12 hours before the preliminary rounds end for events which have one.
 
-- The preliminary rounds’ deadline will differ so be sure to check respective deadlines at [**exun.co/24/schedule**](https://docs.google.com/document/d/1h_sWUuvQlLoiwf4R7kGO7_VQi-mnqlbGrBu6wyAGEhg/edit?usp=sharing)**.** Teams will not be allowed to edit their participants’ names after the preliminary round under any circumstances.
+- The preliminary rounds’ deadline will differ so be sure to check respective deadlines at [**exun.co/25/schedule**](https://exun.co/25/schedule)**.** Teams will not be allowed to edit their participants’ names after the preliminary round under any circumstances.
 
 - School Registration: Schools can register their teams on [**reg.exunclan.com**](https://reg.exunclan.com/). They are also eligible to win the overall prize.
 
@@ -157,5 +157,5 @@ You are welcome to mail us any time at <exun@dpsrkp.net>
 
 # **Event Data**
 
-Please head over to [**exun.co/24/events**](https://exun.co/24/events) for further details about each events and points.
+Please head over to [**exun.co/25/events**](https://exun.co/25/events) for further details about each events and points.
 

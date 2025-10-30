@@ -64,11 +64,11 @@
     <script>console.error('SSR: template .Events missing or empty');</script>
     {{end}}
     <script>document.addEventListener('DOMContentLoaded', function(){ console.log('DOM: event-card count=', document.querySelectorAll('.event-card').length); });</script>
-    {{template "chat" .}}
+    
     <script src="/js/api.js"></script>
     <script src="/js/utils.js"></script>
     <script src="/js/navigation.js"></script>
     <script src="/js/events.js"></script>
-    <script src="/js/query.js"></script>
+    
 </body>
 </html>

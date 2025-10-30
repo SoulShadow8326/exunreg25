@@ -265,3 +265,6 @@
     outline: none !important;
     box-shadow: none !important;
 }
+a.navbar__link {
+    padding-bottom: 2rem;
+}
