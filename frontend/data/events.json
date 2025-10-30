@@ -15,13 +15,12 @@
         "DomainSquare+ Gaming: PC":"ds+_pc_gaming.svg",
         "DomainSquare+ Gaming: Surprise":"gaming.svg",
         "DomainSquare+ Gaming: Quiz":"ds+_quiz.svg",
+        "DomainSquare+ Gaming: Showdown!":"ds+_pkmn.svg",
         "CubXL 2x2":"cubxl_2x2.svg",
         "CubXL 3x3":"cubxl.svg",
         "CubXL Pyraminx":"pyraminx.svg",
-        "CubXL Surprise":"cubxl_surp.svg",
         "Roboknights: Robosoccer":"robotics.svg",
-        "Roboknights: Line Following Robot":"robotics.svg",
-        "Surprise":"open_quiz.svg"
+        "Roboknights: Line Following Robot":"robotics.svg"
     },
     "default": {
         "open_to_all":false,
@@ -97,6 +96,10 @@
             "long":"A quiz crafted for all gaming enthusiasts awaits! The preliminary round will be hosted online. It is mandatory for participants to join on time. If you face any issues during the duration of the quiz, kindly let a team member know in due time. The offline round will be held on 9th and 10th November.",
             "short":"A hybrid gaming quiz for teams of two, starting with an online prelim and concluding with offline rounds. Participants must join on time, and any issues must be reported promptly."
         },
+        "DomainSquare+ Gaming: Showdown!": {
+            "long":"The Pokémon Showdown Tournament is crafted to challenge participants’ strategic depth, adaptability, and presence of mind in the ever-evolving world of competitive Pokémon battles.",
+            "short":"The Pokémon Showdown Tournament is crafted to challenge participants’ strategic depth, adaptability, and presence of mind in the ever-evolving world of competitive Pokémon battles."
+        },
         "CubXL 2x2": {
             "long":"Stoke the spirit of competition and join us for a day of speed, skill, and thrill. A smaller but faster event bringing together talented students from various schools to showcase their cubing prowess in a competitive yet friendly atmosphere. Participants will compete in timed rounds and will be following all the WCA regulations. Qualify the 1st online round to join us offline.",
             "short":"A fast-paced 2x2 speedcubing competition for students from grades 6-12, with online prelims and offline finals. Participants will compete under WCA regulations, combining speed and strategy."
@@ -109,10 +112,6 @@
             "long":"Unleash your competitive spirit as you dive into the exciting world of speed in strategy with Pyraminx! A unique twisty puzzle event brings together seasoned and beginner cubers from various schools to showcase their cubing skills in a competitive yet friendly atmosphere. Participants will compete in timed rounds and follow all the WCA regulations Qualify the 1st online round to vie in the final round.",
             "short":"A Pyraminx speedcubing event for students from grades 6-12, starting with online prelims and concluding with offline finals. Competitors must follow WCA regulations, showcasing their skills in timed rounds."
         },
-        "CubXL Surprise": {
-            "long":"It's all in the name… Brace yourself for this exhilarating event where adaptability and strategy are key. To solve the challenging prompts given on the spot, one must think out of the box!",
-            "short":"A thrilling offline cubing event with a surprise twist. Participants from grades 6-12 must adapt quickly to solve challenging prompts given on the spot, requiring creativity and strategic thinking."
-        },
         "Roboknights: Robosoccer": {
             "long":"In this event, wireless robots race around a scaled-down football arena, striving to score more goals than the opponents.\n\nRobot Specifications:\nNo. of robots allowed - 2 per team (wireless only, wired robots not allowed)\nSize - 30 cm x 30 cm x 30 cm with 5% tolerance\nWeight - 5 kg with 5% tolerance\n\nPower Source - Batteries must be sealed, immobilized electrolyte type (gel cell, lithium, NiCad, or dry cells), at any point it should not cross 12 V.\n\nGameplay - The game comprises 2 halves with each half being 3 minutes long with 1 minute of half time. No ball trapping is allowed. Teams score by getting the ball in the opponent's goal. Intentional damage will lead to disqualification.\n\nReady-made robots and kits are not allowed to compete in the competition.",
             "short":"A thrilling offline competition where wireless robots compete in a football match. Teams of three build two robots to score goals in 3-minute halves, adhering to size and power regulations."
@@ -120,10 +119,6 @@
         "Roboknights: Line Following Robot": {
             "long":"Teams will build their own autonomous robots to achieve maximum speed on a specified track. The robot must start behind the starting line and is considered to finish when any part crosses the line after a full lap, while following the black line.\n\nRobot Specifications:\nSize - 25 cm x 25 cm x 20 cm with 5% tolerance\nWeight - 2 kg with 5% tolerance\n\nPower Source - Batteries must be sealed, immobilized electrolyte type (gel cell, lithium, NiCad, or dry cells), at any point it should not cross 12 V.\n\nThe Robot must follow a black line of 25 mm width on a white surface. It should also be able to handle acute angled turns, switchbacks, hairpins, line gaps and intersections.\n\nThe robot must be autonomous. No wireless communication between bot and operator will be allowed. Bluetooth, RF Module, etc are not allowed on both.\n\nReady-made robots and kits are not allowed to compete in the competition",
             "short":"Teams build autonomous robots for a high-speed line-following race on a specified track. Robots must handle acute turns and intersections while following a black line, with strict size and weight constraints."
-        },
-        "Surprise":{
-            "long":"Surprise!",
-            "short":"Surprise!"
         }
     },
     "participants":{
@@ -136,19 +131,18 @@
         "Quiz": 2,
         "Crossword": 2,
         "Hardware": 2,
-        "Girls In Tech": 1024,
+        "Girls In Tech": 3,
         "Group Discussion": 1,
         "ExML": 2,
         "DomainSquare+ Gaming: PC": 2,
         "DomainSquare+ Gaming: Surprise": 1,
         "DomainSquare+ Gaming: Quiz": 2,
+        "DomainSquare+ Gaming: Showdown!": 1,
         "CubXL 2x2": 1,
         "CubXL 3x3": 1,
         "CubXL Pyraminx": 1,
-        "CubXL Surprise": 1,
         "Roboknights: Robosoccer": 3,
-        "Roboknights: Line Following Robot": 3,
-        "Surprise":2
+        "Roboknights: Line Following Robot": 3
     },
     "mode":
     {
@@ -161,19 +155,18 @@
         "Quiz": "Hybrid",
         "Crossword": "Hybrid",
         "Hardware": "Hybrid",
-        "Girls In Tech": "Hybrid",
+        "Girls In Tech": "Online",
         "Group Discussion": "Hybrid",
         "ExML": "Online",
         "DomainSquare+ Gaming: PC": "Hybrid",
         "DomainSquare+ Gaming: Surprise": "Hybrid",
         "DomainSquare+ Gaming: Quiz": "Hybrid",
+        "DomainSquare+ Gaming: Showdown!": "Hybrid",
         "CubXL 2x2": "Hybrid",
         "CubXL 3x3": "Hybrid",
         "CubXL Pyraminx": "Hybrid",
-        "CubXL Surprise": "Offline",
         "Roboknights: Robosoccer": "Offline",
-        "Roboknights: Line Following Robot": "Offline",
-        "Surprise": "Hybrid"
+        "Roboknights: Line Following Robot": "Offline"
     },
     "points": {
         "Build: Hackathon": 30,
@@ -187,17 +180,16 @@
         "Hardware": 30,
         "Girls In Tech": 20,
         "Group Discussion": 25,
-        "ExML": 20,
+        "ExML": 30,
         "DomainSquare+ Gaming: PC": 20,
         "DomainSquare+ Gaming: Surprise": 20,
         "DomainSquare+ Gaming: Quiz": 20,
+        "DomainSquare+ Gaming: Showdown!": 20,
         "CubXL 2x2": 10,
         "CubXL 3x3": 15,
         "CubXL Pyraminx": 10,
-        "CubXL Surprise": 10,
-        "Roboknights: Robosoccer": 30,
-        "Roboknights: Line Following Robot": 20,
-        "Surprise": 20
+        "Roboknights: Robosoccer": 20,
+        "Roboknights: Line Following Robot": 15
     },
     "individual" : {
         "Build: Hackathon": false,
@@ -215,10 +207,10 @@
         "DomainSquare+ Gaming: PC": false,
         "DomainSquare+ Gaming: Surprise": false,
         "DomainSquare+ Gaming: Quiz": false,
+        "DomainSquare+ Gaming: Showdown!": false,
         "CubXL 2x2": false,
         "CubXL 3x3": false,
         "CubXL Pyraminx": false,
-        "CubXL Surprise": false,
         "Roboknights: Robosoccer": false,
         "Roboknights: Line Following Robot": false,
         "Surprise": false
@@ -239,10 +231,10 @@
         "DomainSquare+ Gaming: PC": [9, 12],
         "DomainSquare+ Gaming: Surprise": [9, 12],
         "DomainSquare+ Gaming: Quiz": [9, 12],
+        "DomainSquare+ Gaming: Showdown!": [9, 12],
         "CubXL 2x2": [6, 12],
         "CubXL 3x3": [6, 12],
         "CubXL Pyraminx": [6, 12],
-        "CubXL Surprise": [6, 12],
         "Roboknights: Robosoccer": [9, 12],
         "Roboknights: Line Following Robot": [9, 12],
         "Surprise": [9,12]
@@ -263,10 +255,10 @@
         "DomainSquare+ Gaming: PC": false,
         "DomainSquare+ Gaming: Surprise": false,
         "DomainSquare+ Gaming: Quiz": false,
+        "DomainSquare+ Gaming: Showdown!": false,
         "CubXL 2x2": false,
         "CubXL 3x3": false,
         "CubXL Pyraminx": false,
-        "CubXL Surprise": false,
         "Roboknights: Robosoccer": false,
         "Roboknights: Line Following Robot": false,
         "Surprise": false
