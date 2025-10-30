@@ -212,8 +212,7 @@
         "CubXL 3x3": false,
         "CubXL Pyraminx": false,
         "Roboknights: Robosoccer": false,
-        "Roboknights: Line Following Robot": false,
-        "Surprise": false
+        "Roboknights: Line Following Robot": false
     },
     "eligibility" : {
         "Build: Hackathon": [6, 12],
@@ -236,8 +235,7 @@
         "CubXL 3x3": [6, 12],
         "CubXL Pyraminx": [6, 12],
         "Roboknights: Robosoccer": [9, 12],
-        "Roboknights: Line Following Robot": [9, 12],
-        "Surprise": [9,12]
+        "Roboknights: Line Following Robot": [9, 12]
     },
     "open_to_all" : {
         "Build: Hackathon": false,
@@ -260,7 +258,6 @@
         "CubXL 3x3": false,
         "CubXL Pyraminx": false,
         "Roboknights: Robosoccer": false,
-        "Roboknights: Line Following Robot": false,
-        "Surprise": false
+        "Roboknights: Line Following Robot": false
     }
 }
