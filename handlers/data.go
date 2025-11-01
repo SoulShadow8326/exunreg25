@@ -582,7 +582,7 @@ func syncAllTablesToSheets(database *db.Database) error {
 				colsCount := len(hdr)
 				sheetMap := map[string]int{}
 				for i, r := range sheetRows {
-					if pkIndex < len(r) {
+					if pkIndex >= 0 && pkIndex < len(r) {
 						sheetMap[strings.TrimSpace(r[pkIndex])] = i
 					}
 				}
